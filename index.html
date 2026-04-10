@@ -407,7 +407,19 @@ textarea{resize:vertical;min-height:68px;}
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Firebase Configuration & Initialization
+const fConfigStr = typeof window !== 'undefined' && window.__firebase_config ? window.__firebase_config : (typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+const firebaseConfig = JSON.parse(fConfigStr);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
+
 // ═══ STATE ═══
 let tasks=[], staff=[], nextId=1, editingId=null;
 let filterStatus='all', filterPeriod='all', isAdmin=true;
@@ -417,15 +429,26 @@ const ACLRS=['#6c63ff','#ff6584','#3ecf8e','#ff9f43','#54a0ff','#f5c842','#ff5e5
 const today=new Date().toISOString().slice(0,10);
 const plus3=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
 
-// ═══ PERSIST ═══
-function save(){localStorage.setItem('pt',JSON.stringify(tasks));localStorage.setItem('ps',JSON.stringify(staff));localStorage.setItem('pse',JSON.stringify(settings));}
-function load(){
-  try{
-    const t=localStorage.getItem('pt'),s=localStorage.getItem('ps'),se=localStorage.getItem('pse');
-    if(t)tasks=JSON.parse(t); if(s)staff=JSON.parse(s); if(se)settings={...settings,...JSON.parse(se)};
-    nextId=tasks.length?Math.max(...tasks.map(x=>x.id))+1:1;
-  }catch(e){}
+// ═══ PERSIST (CLOUD SYNC) ═══
+let isReady = false;
+let currentUser = null;
+
+async function save(){
+  if (!currentUser) return;
+  const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker', 'mainState');
+  try {
+    await setDoc(docRef, {
+      tasks: JSON.stringify(tasks),
+      staff: JSON.stringify(staff),
+      settings: JSON.stringify(settings),
+      updatedAt: new Date().toISOString()
+    });
+  } catch (e) {
+    console.error("Save error:", e);
+    toast('Ошибка сохранения в облако', 'error');
+  }
 }
+
 function initDefaults(){
   staff=[{id:1,name:'Куриленко З.В.',role:'Директор',phone:'',color:ACLRS[0]},{id:2,name:'Ермолова Е.В.',role:'Менеджер',phone:'',color:ACLRS[1]}];
   const cy = new Date().getFullYear();
@@ -907,11 +930,72 @@ function clearAll(){if(!confirm('Удалить ВСЕ данные? Это не
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.metaKey||e.ctrlKey)&&e.key==='n'){e.preventDefault();openAddModal();}});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
 
-// ═══ INIT ═══
-load();
-if(!tasks.length)initDefaults();
-renderAll();
-initSpeech(); // Инициализация функции распознавания голоса
+// ═══ BIND TO WINDOW ═══
+window.toggleRole = toggleRole; window.showTab = showTab; window.openAddModal = openAddModal;
+window.renderAll = renderAll; window.exportExcel = exportExcel; window.importFile = importFile;
+window.setPeriod = setPeriod; window.setFilter = setFilter; window.toggleSD = toggleSD;
+window.setStatus = setStatus; window.editNote = editNote; window.openEditModal = openEditModal;
+window.deleteTask = deleteTask; window.addStaff = addStaff; window.deleteStaff = deleteStaff;
+window.toggleSetting = toggleSetting; window.exportJSON = exportJSON; window.clearAll = clearAll;
+window.closeModal = closeModal; window.saveTask = saveTask; window.toggleDictation = toggleDictation;
+
+// ═══ CLOUD INIT ═══
+async function startApp() {
+  try {
+    const token = typeof window !== 'undefined' && window.__initial_auth_token ? window.__initial_auth_token : (typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null);
+    if (token) {
+      await signInWithCustomToken(auth, token);
+    } else {
+      await signInAnonymously(auth);
+    }
+  } catch (err) {
+    console.error("Auth init error:", err);
+  }
+
+  onAuthStateChanged(auth, (user) => {
+    currentUser = user;
+    if (user) {
+      // Используем запрос коллекции (collection) вместо запроса одного документа (doc) для предотвращения таймаутов
+      const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker');
+      
+      onSnapshot(collRef, (snapshot) => {
+        let found = false;
+        snapshot.forEach(docSnap => {
+          if (docSnap.id === 'mainState') {
+            found = true;
+            const data = docSnap.data();
+            tasks = JSON.parse(data.tasks || '[]');
+            staff = JSON.parse(data.staff || '[]');
+            settings = JSON.parse(data.settings || '{}');
+            settings = {showOverdue:true, warnDays:true, ...settings};
+            nextId = tasks.length ? Math.max(...tasks.map(x => x.id)) + 1 : 1;
+            isReady = true;
+            
+            const active = document.activeElement;
+            const isEditing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+            if (!isEditing || document.getElementById('modal').classList.contains('open') === false) {
+                renderAll();
+                if(document.getElementById('tab-staff').style.display !== 'none') renderStaff();
+            }
+          }
+        });
+        
+        if (!found && !isReady) {
+          initDefaults();
+          isReady = true;
+        }
+      }, (error) => {
+        console.error("Sync error:", error);
+        toast("Ошибка синхронизации данных", "error");
+      });
+    }
+  });
+}
+
+// Запуск приложения
+initSpeech();
+startApp();
+
 </script>
 </body>
 </html>
