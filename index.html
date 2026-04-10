@@ -1,0 +1,810 @@
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Протокол задач</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;400;600;700&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f0f13;--surface:#17171e;--surface2:#1e1e28;--surface3:#252533;--border:#2a2a38;--accent:#6c63ff;--green:#3ecf8e;--orange:#ff9f43;--red:#ff5e57;--blue:#54a0ff;--gold:#f5c842;--text:#e8e8f0;--text-muted:#7a7a9a;--text-dim:#4a4a6a;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Golos Text',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+header{position:sticky;top:0;z-index:200;background:rgba(15,15,19,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;gap:12px;height:60px;}
+.logo{font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);white-space:nowrap;}
+.header-right{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;}
+.stat-pill{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 11px;font-size:11px;font-weight:600;white-space:nowrap;}
+.stat-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.role-badge{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid var(--border);cursor:pointer;transition:all .2s;white-space:nowrap;}
+.role-admin{color:var(--gold);background:rgba(245,200,66,.1);border-color:rgba(245,200,66,.3);}
+.role-viewer{color:var(--text-muted);background:var(--surface2);}
+.nav-tabs{display:flex;background:var(--surface2);border-bottom:1px solid var(--border);padding:0 24px;overflow-x:auto;}
+.nav-tab{font-family:'Golos Text',sans-serif;font-size:13px;font-weight:600;padding:11px 16px;border:none;background:none;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .18s;white-space:nowrap;}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.toolbar{padding:14px 24px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.btn{font-family:'Golos Text',sans-serif;font-size:13px;font-weight:600;padding:8px 15px;border-radius:8px;border:none;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#7b74ff;transform:translateY(-1px);box-shadow:0 4px 16px rgba(108,99,255,.4);}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-ghost{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent);}
+.btn-danger{background:rgba(255,94,87,.1);color:var(--red);border:1px solid rgba(255,94,87,.25);}
+.btn-danger:hover{background:rgba(255,94,87,.2);}
+.btn-success{background:rgba(62,207,142,.1);color:var(--green);border:1px solid rgba(62,207,142,.25);}
+.btn-success:hover{background:rgba(62,207,142,.2);}
+.search-box{flex:1;min-width:160px;max-width:280px;display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 12px;transition:border-color .2s;}
+.search-box:focus-within{border-color:var(--accent);}
+.search-box input{background:none;border:none;outline:none;color:var(--text);font-family:'Golos Text',sans-serif;font-size:13px;width:100%;}
+.search-box input::placeholder{color:var(--text-dim);}
+.sel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 11px;color:var(--text);font-family:'Golos Text',sans-serif;font-size:13px;outline:none;cursor:pointer;}
+.sel:focus{border-color:var(--accent);}
+.period-bar{padding:0 24px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.period-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);}
+.period-btn{font-size:12px;font-weight:600;padding:4px 11px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all .15s;}
+.period-btn:hover{color:var(--text);}
+.period-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(108,99,255,.12);}
+.filter-row{padding:0 24px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.chip{font-size:12px;font-weight:600;padding:4px 11px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);cursor:pointer;transition:all .15s;}
+.chip:hover{color:var(--text);}
+.chip.active{border-color:currentColor;}
+.chip[data-val="all"].active{color:var(--accent);background:rgba(108,99,255,.12);}
+.chip[data-val="не выполнено"].active{color:var(--red);background:rgba(255,94,87,.12);}
+.chip[data-val="в работе"].active{color:var(--orange);background:rgba(255,159,67,.12);}
+.chip[data-val="выполнено"].active{color:var(--green);background:rgba(62,207,142,.12);}
+.chip[data-val="overdue"].active{color:var(--gold);background:rgba(245,200,66,.12);}
+.progress-section{margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.progress-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);}
+.progress-nums{display:flex;gap:14px;font-size:11px;font-weight:600;flex-wrap:wrap;}
+.progress-pct{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;color:var(--green);}
+.progress-bar-bg{height:6px;background:var(--surface2);border-radius:4px;overflow:hidden;display:flex;gap:2px;}
+.progress-seg{height:100%;border-radius:4px;transition:width .4s ease;}
+.deadline-banner{margin:0 24px 14px;background:rgba(245,200,66,.06);border:1px solid rgba(245,200,66,.22);border-radius:10px;padding:11px 15px;display:flex;align-items:flex-start;gap:10px;}
+.deadline-banner.hidden{display:none;}
+.deadline-list{font-size:11px;color:var(--gold);margin-top:4px;line-height:1.6;}
+main{padding:0 24px 80px;}
+.month-group{margin-bottom:26px;}
+.month-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.month-label{font-family:'Unbounded',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);}
+.month-bar{flex:1;height:1px;background:linear-gradient(90deg,var(--border) 0%,transparent 100%);}
+.month-meta{font-size:11px;color:var(--text-dim);font-weight:600;display:flex;gap:10px;}
+.tasks-table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface);}
+.tasks-table thead th{background:var(--surface2);padding:10px 13px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);border-bottom:1px solid var(--border);white-space:nowrap;}
+.tasks-table tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+.tasks-table tbody tr:last-child{border-bottom:none;}
+.tasks-table tbody tr:hover{background:rgba(108,99,255,.04);}
+.tasks-table tbody tr.ov-row{background:rgba(245,200,66,.025);}
+.tasks-table td{padding:11px 13px;font-size:13px;vertical-align:middle;}
+.col-num{width:36px;text-align:center;color:var(--text-dim);font-weight:700;font-size:11px;}
+.col-task{min-width:200px;}
+.col-created{width:80px;}
+.col-date{width:90px;}
+.col-exec{width:115px;}
+.col-coexec{width:115px;}
+.col-status{width:138px;}
+.col-note{width:110px;}
+.col-actions{width:66px;text-align:center;}
+.task-text{font-size:13px;line-height:1.5;}
+.ov-row .task-text::after{content:' ⚠';color:var(--gold);font-size:10px;}
+.date-range{display:flex;flex-direction:column;gap:1px;font-size:11px;}
+.date-s{color:var(--text-muted);}
+.date-e{color:var(--text-dim);}
+.person-tag{font-size:12px;font-weight:600;color:var(--blue);display:block;}
+.coperson-tag{font-size:11px;color:var(--text-muted);display:block;}
+.status-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:14px;white-space:nowrap;cursor:pointer;border:1px solid transparent;transition:all .12s;}
+.status-badge .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.st-done{background:rgba(62,207,142,.12);color:var(--green);border-color:rgba(62,207,142,.25);}
+.st-done .dot{background:var(--green);}
+.st-progress{background:rgba(255,159,67,.12);color:var(--orange);border-color:rgba(255,159,67,.25);}
+.st-progress .dot{background:var(--orange);}
+.st-todo{background:rgba(255,94,87,.12);color:var(--red);border-color:rgba(255,94,87,.25);}
+.st-todo .dot{background:var(--red);}
+.st-none{background:var(--surface2);color:var(--text-dim);border-color:var(--border);}
+.st-none .dot{background:var(--text-dim);}
+.status-cell{position:relative;}
+.status-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:400;background:var(--surface2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.5);overflow:hidden;min-width:148px;}
+.status-dd.open{display:block;}
+.status-opt{padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s;}
+.status-opt:hover{background:rgba(255,255,255,.05);}
+.status-opt .dot{width:6px;height:6px;border-radius:50%;}
+.act-btn{background:none;border:none;width:25px;height:25px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);transition:all .12s;font-size:13px;}
+.act-btn:hover{background:var(--surface2);color:var(--text);}
+.act-btn.del:hover{background:rgba(255,94,87,.12);color:var(--red);}
+.act-btn:disabled{opacity:.2;cursor:not-allowed;}
+.note-text{font-size:11px;color:var(--text-muted);font-style:italic;cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .15s;}
+.note-text:hover{border-color:var(--text-dim);}
+.note-input{background:var(--surface2);border:1px solid var(--accent);border-radius:6px;padding:4px 8px;color:var(--text);font-family:'Golos Text',sans-serif;font-size:11px;width:100%;outline:none;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-dim);font-size:14px;}
+/* MOBILE CARDS */
+.mobile-cards{display:none;}
+.task-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;transition:border-color .15s;}
+.task-card.ov-row{border-left:3px solid var(--gold);}
+.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;}
+.card-task{font-size:13px;line-height:1.5;flex:1;}
+.card-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:10px;}
+.card-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:mIn .2s ease;position:relative;}
+@keyframes mIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.modal-title{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;margin-bottom:18px;}
+.modal-close{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:4px;}
+.modal-close:hover{color:var(--text);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);}
+input[type=text],input[type=date],input[type=number],select,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-family:'Golos Text',sans-serif;font-size:13px;outline:none;transition:border-color .2s;width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.4);}
+select option{background:var(--surface2);}
+textarea{resize:vertical;min-height:68px;}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+/* STAFF */
+.staff-page,.settings-page{padding:24px;}
+.page-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;margin-bottom:18px;}
+.staff-add-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
+.staff-add-form .form-group{flex:1;min-width:130px;}
+.staff-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;}
+.staff-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;transition:border-color .2s;}
+.staff-card:hover{border-color:var(--accent);}
+.staff-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+.staff-info{flex:1;min-width:0;}
+.staff-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.staff-role{font-size:11px;color:var(--text-muted);}
+/* SETTINGS */
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
+.settings-section h3{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+.settings-row:last-child{border-bottom:none;}
+.settings-row label{font-size:13px;color:var(--text);text-transform:none;letter-spacing:0;font-weight:400;}
+.toggle{width:34px;height:19px;background:var(--border);border-radius:10px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle.on{background:var(--accent);}
+.toggle::after{content:'';position:absolute;width:15px;height:15px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;}
+.toggle.on::after{left:17px;}
+/* TOAST */
+.toast{position:fixed;bottom:22px;right:22px;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tIn .22s ease;pointer-events:none;}
+.toast.success{border-color:rgba(62,207,142,.35);color:var(--green);}
+.toast.error{border-color:rgba(255,94,87,.35);color:var(--red);}
+.toast.warn{border-color:rgba(245,200,66,.35);color:var(--gold);}
+@keyframes tIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+/* PRINT STYLES */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  header, .nav-tabs, .toolbar, .period-bar, .filter-row, .progress-section, .deadline-banner, .modal-overlay, .act-btn, .settings-page, .staff-page, .toast { display: none !important; }
+  #tab-tasks { display: block !important; }
+  main { padding: 0 !important; }
+  .month-group { margin-bottom: 20px; page-break-inside: avoid; }
+  .month-header { margin-bottom: 5px; }
+  .month-label { color: #000 !important; }
+  .month-bar { background: #000 !important; height: 1px; }
+  .tasks-table { display: table !important; width: 100%; border: 1px solid #000 !important; border-radius: 0; }
+  .tasks-table th, .tasks-table td { border: 1px solid #000 !important; color: #000 !important; padding: 6px !important; font-size: 11px !important; }
+  .tasks-table thead th { background: #f0f0f0 !important; }
+  .mobile-cards { display: none !important; }
+  .status-badge { border: none !important; background: transparent !important; color: #000 !important; padding: 0 !important; }
+  .status-badge .dot { display: none !important; }
+  .person-tag, .coperson-tag { color: #000 !important; }
+  .date-s, .date-e { color: #000 !important; }
+  .col-actions { display: none !important; }
+}
+
+@media(max-width:768px){
+  .tasks-table{display:none!important;}
+  .mobile-cards{display:block;}
+  .col-coexec,.col-note,.col-created{display:none;}
+  header{padding:0 16px;}
+  .toolbar,.filter-row,.period-bar,main{padding-left:16px;padding-right:16px;}
+  .progress-section,.deadline-banner{margin-left:16px;margin-right:16px;}
+  .nav-tabs{padding:0 16px;}
+  .form-grid{grid-template-columns:1fr;}
+  .form-group.full{grid-column:1;}
+  .header-right .stat-pill{display:none;}
+}
+@media(max-width:460px){
+  .role-badge span:first-child{display:none;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Протокол</div>
+  <div class="header-right">
+    <div class="stat-pill"><span class="stat-dot" style="background:var(--green)"></span><span id="hd-done">0</span></div>
+    <div class="stat-pill"><span class="stat-dot" style="background:var(--orange)"></span><span id="hd-prog">0</span></div>
+    <div class="stat-pill"><span class="stat-dot" style="background:var(--red)"></span><span id="hd-todo">0</span></div>
+    <div class="role-badge role-admin" id="roleBtn" onclick="toggleRole()" title="Нажмите для смены роли">👑 Администратор</div>
+  </div>
+</header>
+
+<div class="nav-tabs">
+  <button class="nav-tab active" onclick="showTab('tasks')">📋 Задачи</button>
+  <button class="nav-tab" onclick="showTab('staff')">👥 Сотрудники</button>
+  <button class="nav-tab" onclick="showTab('settings')">⚙️ Настройки</button>
+</div>
+
+<!-- ───── ЗАДАЧИ ───── -->
+<div id="tab-tasks">
+  <div class="toolbar">
+    <button class="btn btn-primary" id="addBtn" onclick="openAddModal()">＋ Задача</button>
+    <div class="search-box">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Поиск..." oninput="renderAll()">
+    </div>
+    <select class="sel" id="execFilter" onchange="renderAll()"><option value="">Все исполнители</option></select>
+    <button class="btn btn-ghost" onclick="window.print()">🖨 Печать</button>
+    <button class="btn btn-success" onclick="exportExcel()">⬇ Excel</button>
+    <label class="btn btn-ghost" style="cursor:pointer;">⬆ Импорт<input type="file" accept=".xlsx,.json" style="display:none" onchange="importFile(this)"></label>
+  </div>
+
+  <div class="period-bar">
+    <span class="period-label">Период:</span>
+    <div id="periodBtns" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+  </div>
+
+  <div class="filter-row">
+    <span class="period-label">Статус:</span>
+    <div class="chip active" data-val="all" onclick="setFilter('all')">Все</div>
+    <div class="chip" data-val="выполнено" onclick="setFilter('выполнено')">✓ Выполнено</div>
+    <div class="chip" data-val="в работе" onclick="setFilter('в работе')">● В работе</div>
+    <div class="chip" data-val="не выполнено" onclick="setFilter('не выполнено')">✕ Не выполнено</div>
+    <div class="chip" data-val="" onclick="setFilter('')">- Без статуса</div>
+    <div class="chip" data-val="overdue" onclick="setFilter('overdue')">⚠ Просроченные</div>
+  </div>
+
+  <div class="deadline-banner hidden" id="deadlineBanner">
+    <span style="font-size:18px">⚠️</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:var(--gold)" id="deadlineText"></div>
+      <div class="deadline-list" id="deadlineList"></div>
+    </div>
+    <button class="act-btn" onclick="document.getElementById('deadlineBanner').classList.add('hidden')">✕</button>
+  </div>
+
+  <div class="progress-section">
+    <div class="progress-header">
+      <span class="progress-title">Общий прогресс</span>
+      <div class="progress-nums">
+        <span style="color:var(--green)" id="pn-done">0 выполнено</span>
+        <span style="color:var(--orange)" id="pn-prog">0 в работе</span>
+        <span style="color:var(--red)" id="pn-todo">0 не выполнено</span>
+      </div>
+      <span class="progress-pct" id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-seg" id="segDone" style="width:0%;background:var(--green)"></div>
+      <div class="progress-seg" id="segProg" style="width:0%;background:var(--orange)"></div>
+      <div class="progress-seg" id="segTodo" style="width:0%;background:var(--red)"></div>
+    </div>
+  </div>
+
+  <main id="mainContent"></main>
+</div>
+
+<!-- ───── СОТРУДНИКИ ───── -->
+<div id="tab-staff" style="display:none">
+  <div class="staff-page">
+    <div class="page-title">Справочник сотрудников</div>
+    <div class="staff-add-form" id="staffAddForm">
+      <div class="form-group"><label>ФИО</label><input type="text" id="sfName" placeholder="Фамилия И.О."></div>
+      <div class="form-group"><label>Должность</label><input type="text" id="sfRole" placeholder="Директор..."></div>
+      <div class="form-group"><label>Телефон</label><input type="text" id="sfPhone" placeholder="+7 ..."></div>
+      <button class="btn btn-primary" onclick="addStaff()">＋ Добавить</button>
+    </div>
+    <div class="staff-grid" id="staffGrid"></div>
+  </div>
+</div>
+
+<!-- ───── НАСТРОЙКИ ───── -->
+<div id="tab-settings" style="display:none">
+  <div class="settings-page">
+    <div class="page-title">Настройки</div>
+    <div class="settings-section">
+      <h3>Права доступа</h3>
+      <div class="settings-row">
+        <label>Текущая роль: <strong id="roleLabel">Администратор</strong></label>
+        <button class="btn btn-ghost" style="font-size:12px;" onclick="toggleRole()">Сменить</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:10px;line-height:1.7;">
+        <b style="color:var(--text-muted)">Администратор</b> - полный доступ: создание, редактирование, удаление задач.<br>
+        <b style="color:var(--text-muted)">Наблюдатель</b> - только просмотр. Все кнопки редактирования заблокированы.
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>Уведомления о дедлайнах</h3>
+      <div class="settings-row">
+        <label>Показывать баннер просроченных задач</label>
+        <div class="toggle on" id="togOverdue" onclick="toggleSetting('showOverdue',this)"></div>
+      </div>
+      <div class="settings-row">
+        <label>Предупреждать за 3 дня до дедлайна</label>
+        <div class="toggle on" id="togWarn" onclick="toggleSetting('warnDays',this)"></div>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>Данные</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-success" onclick="exportExcel()">⬇ Экспорт Excel</button>
+        <button class="btn btn-ghost" onclick="exportJSON()">⬇ Экспорт JSON</button>
+        <label class="btn btn-ghost" style="cursor:pointer;">⬆ Импорт файла<input type="file" accept=".xlsx,.json" style="display:none" onchange="importFile(this)"></label>
+        <button class="btn btn-danger" onclick="clearAll()">🗑 Очистить данные</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── МОДАЛ ЗАДАЧИ ───── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title" id="modalTitle">Новая задача</div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Задача *</label><textarea id="fTask" rows="3" placeholder="Описание задачи..."></textarea></div>
+      <div class="form-group">
+        <label>Период</label>
+        <div style="display:flex; gap:5px;">
+          <select id="fMonth" style="flex:2;">
+            <option>Январь</option><option>Февраль</option><option>Март</option>
+            <option>Апрель</option><option>Май</option><option>Июнь</option>
+            <option>Июль</option><option>Август</option><option>Сентябрь</option>
+            <option>Октябрь</option><option>Ноябрь</option><option>Декабрь</option>
+          </select>
+          <input type="number" id="fYear" style="flex:1;" min="2020" max="2100" placeholder="Год">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Статус</label>
+        <select id="fStatus">
+          <option value="">- Без статуса</option>
+          <option value="не выполнено">Не выполнено</option>
+          <option value="в работе">В работе</option>
+          <option value="выполнено">Выполнено</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Дата постановки</label><input type="date" id="fCreated"></div>
+      <div class="form-group"><label>Начало работы</label><input type="date" id="fStart"></div>
+      <div class="form-group"><label>Окончание работы</label><input type="date" id="fEnd"></div>
+      <div class="form-group"><label>Исполнитель</label><input type="text" id="fExec" placeholder="ФИО" list="staffList"></div>
+      <div class="form-group"><label>Соисполнитель</label><input type="text" id="fCoexec" placeholder="ФИО" list="staffList"></div>
+      <div class="form-group full"><label>Примечание</label><input type="text" id="fNote" placeholder="Дополнительные сведения..."></div>
+    </div>
+    <datalist id="staffList"></datalist>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveTask()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ STATE ═══
+let tasks=[], staff=[], nextId=1, editingId=null;
+let filterStatus='all', filterPeriod='all', isAdmin=true;
+let settings={showOverdue:true, warnDays:true};
+const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const ACLRS=['#6c63ff','#ff6584','#3ecf8e','#ff9f43','#54a0ff','#f5c842','#ff5e57','#a29bfe'];
+const today=new Date().toISOString().slice(0,10);
+const plus3=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
+
+// ═══ PERSIST ═══
+function save(){localStorage.setItem('pt',JSON.stringify(tasks));localStorage.setItem('ps',JSON.stringify(staff));localStorage.setItem('pse',JSON.stringify(settings));}
+function load(){
+  try{
+    const t=localStorage.getItem('pt'),s=localStorage.getItem('ps'),se=localStorage.getItem('pse');
+    if(t)tasks=JSON.parse(t); if(s)staff=JSON.parse(s); if(se)settings={...settings,...JSON.parse(se)};
+    nextId=tasks.length?Math.max(...tasks.map(x=>x.id))+1:1;
+  }catch(e){}
+}
+function initDefaults(){
+  staff=[{id:1,name:'Куриленко З.В.',role:'Директор',phone:'',color:ACLRS[0]},{id:2,name:'Ермолова Е.В.',role:'Менеджер',phone:'',color:ACLRS[1]}];
+  const cy = new Date().getFullYear();
+  tasks=[
+    {id:1,month:`Январь ${cy}`,task:'Составить, согласовать и подписать Партнерское соглашение с участниками проекта',created:'2026-01-01',start:'2026-01-04',end:'2026-01-15',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено'},
+    {id:2,month:`Январь ${cy}`,task:'Подобрать офис и заключить договор аренды',created:'2026-01-01',start:'2026-01-12',end:'2026-03-31',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено'},
+    {id:3,month:`Январь ${cy}`,task:'Зарегистрировать юридическое лицо ООО "Девелопмент групп"',created:'2026-01-01',start:'2026-01-19',end:'2026-01-31',exec:'Куриленко З.В.',coexec:'Ермолова Е.В.',note:'',status:'в работе'},
+    {id:4,month:`Январь ${cy}`,task:'Провести переговоры с ООО "Азимут-Плюс" на предмет абонентского обслуживания в части градостроительного анализа',created:'2026-01-01',start:'2026-01-12',end:'2026-01-16',exec:'Ермолова Е.В.',coexec:'Куриленко З.В.',note:'',status:'в работе'},
+    {id:5,month:`Январь ${cy}`,task:'Провести переговоры со Сбербанком и Экспобанком на предмет соответствия SPV-компании требованиям банка',created:'2026-01-01',start:'2026-01-12',end:'2026-01-26',exec:'Ермолова Е.В.',coexec:'',note:'',status:''},
+    {id:6,month:`Январь ${cy}`,task:'Отобрать земельный участок для инвестиционного проекта',created:'2026-01-01',start:'2026-01-04',end:'2026-01-31',exec:'',coexec:'',note:'',status:''},
+    {id:7,month:`Январь ${cy}`,task:'Согласовать с партнерами ТЭПы, финмодель и старт проекта',created:'2026-01-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:8,month:`Январь ${cy}`,task:'Подготовить универсальное ТЗ для подбора ЗУ для внешних пользователей',created:'2026-01-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:9,month:`Февраль ${cy}`,task:'Зарегистрировать SPV-компанию',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:10,month:`Февраль ${cy}`,task:'Подготовить и утвердить необходимые Положения, регламенты, учетные политики и инструкции, структуру, штатное расписание SPV-компании',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:11,month:`Февраль ${cy}`,task:'Отдать в банк пакет документов для предварительного анализа проекта',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:12,month:`Февраль ${cy}`,task:'Разработать и утвердить дорожную карту проекта',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:13,month:`Февраль ${cy}`,task:'Заключить договор на разработку концепции с проектной организацией',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:14,month:`Март ${cy}`,task:'Заключить договор на проектирование с проектной организацией',created:'2026-03-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:15,month:`Март ${cy}`,task:'Обустроить офис и переехать',created:'2026-03-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+  ];
+  nextId=16; save();
+}
+
+// ═══ TABS ═══
+function showTab(n){
+  ['tasks','staff','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===n?'':'none');
+  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['tasks','staff','settings'][i]===n));
+  if(n==='staff')renderStaff();
+}
+
+// ═══ ROLE ═══
+function toggleRole(){
+  isAdmin=!isAdmin;
+  const b=document.getElementById('roleBtn');
+  b.textContent=isAdmin?'👑 Администратор':'👁 Наблюдатель';
+  b.className='role-badge '+(isAdmin?'role-admin':'role-viewer');
+  document.getElementById('roleLabel').textContent=isAdmin?'Администратор':'Наблюдатель';
+  document.getElementById('addBtn').disabled=!isAdmin;
+  document.getElementById('staffAddForm').style.display=isAdmin?'':'none';
+  renderAll(); toast(isAdmin?'👑 Режим администратора':'👁 Режим наблюдателя',isAdmin?'success':'warn');
+}
+
+// ═══ HELPERS ═══
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(d){if(!d)return'-';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
+function stCls(s){return s==='выполнено'?'st-done':s==='в работе'?'st-progress':s==='не выполнено'?'st-todo':'st-none';}
+function stLbl(s){return s||'- Нет статуса';}
+function stDotClr(s){return s==='выполнено'?'var(--green)':s==='в работе'?'var(--orange)':s==='не выполнено'?'var(--red)':'var(--text-dim)';}
+function initials(n){return(n||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
+function aColor(n){let h=0;for(const c of(n||''))h=(h*31+c.charCodeAt(0))%ACLRS.length;return ACLRS[h];}
+
+// ═══ TOAST ═══
+function toast(msg,type='success'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2600);}
+
+// ═══ PERIOD SORTING ═══
+function parsePeriod(p){
+  if(!p) return 0;
+  const parts = p.split(' ');
+  const m = MONTHS.indexOf(parts[0]);
+  const y = parts[1] ? parseInt(parts[1]) : 0;
+  return y * 12 + (m >= 0 ? m : 0);
+}
+
+// ═══ PERIOD ═══
+function buildPeriodBtns(){
+  const used=[...new Set(tasks.map(t=>t.month))].sort((a,b)=>parsePeriod(a)-parsePeriod(b));
+  document.getElementById('periodBtns').innerHTML=
+    `<div class="period-btn ${filterPeriod==='all'?'active':''}" onclick="setPeriod('all')">Все</div>`+
+    used.map(m=>`<div class="period-btn ${filterPeriod===m?'active':''}" onclick="setPeriod('${m}')">${m}</div>`).join('');
+}
+function setPeriod(m){filterPeriod=m;renderAll();}
+
+// ═══ EXEC FILTER ═══
+function buildExecFilter(){
+  const sel=document.getElementById('execFilter'),cur=sel.value;
+  const execs=[...new Set(tasks.map(t=>t.exec).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Все исполнители</option>'+execs.map(e=>`<option value="${esc(e)}"${cur===e?' selected':''}>${esc(e)}</option>`).join('');
+}
+
+// ═══ DATALIST ═══
+function updateDL(){document.getElementById('staffList').innerHTML=staff.map(s=>`<option value="${esc(s.name)}">`).join('');}
+
+// ═══ DEADLINES ═══
+function checkDeadlines(){
+  const ov=tasks.filter(t=>t.end&&t.end<today&&t.status!=='выполнено');
+  const wn=tasks.filter(t=>t.end&&t.end>=today&&t.end<=plus3&&t.status!=='выполнено');
+  const banner=document.getElementById('deadlineBanner');
+  if((settings.showOverdue&&ov.length)||(settings.warnDays&&wn.length)){
+    banner.classList.remove('hidden');
+    let txt='',list='';
+    if(settings.showOverdue&&ov.length){txt+=`Просрочено: ${ov.length} задач. `;list+=ov.map(t=>`⚠ ${t.task.slice(0,50)}... → ${fmtDate(t.end)}`).join('\n');}
+    if(settings.warnDays&&wn.length){txt+=`Дедлайн через 3 дня: ${wn.length} задач.`;}
+    document.getElementById('deadlineText').textContent=txt;
+    document.getElementById('deadlineList').textContent=list;
+  }else{banner.classList.add('hidden');}
+}
+
+// ═══ STATS ═══
+function updateStats(){
+  const dn=tasks.filter(t=>t.status==='выполнено').length;
+  const pr=tasks.filter(t=>t.status==='в работе').length;
+  const td=tasks.filter(t=>t.status==='не выполнено').length;
+  const total=tasks.length;
+  document.getElementById('hd-done').textContent=dn;
+  document.getElementById('hd-prog').textContent=pr;
+  document.getElementById('hd-todo').textContent=td;
+  document.getElementById('pn-done').textContent=`${dn} выполнено`;
+  document.getElementById('pn-prog').textContent=`${pr} в работе`;
+  document.getElementById('pn-todo').textContent=`${td} не выполнено`;
+  const pct=total?Math.round(dn/total*100):0;
+  document.getElementById('progressPct').textContent=pct+'%';
+  document.getElementById('segDone').style.width=(dn/total*100||0)+'%';
+  document.getElementById('segProg').style.width=(pr/total*100||0)+'%';
+  document.getElementById('segTodo').style.width=(td/total*100||0)+'%';
+}
+
+// ═══ FILTER ═══
+function setFilter(v){filterStatus=v;document.querySelectorAll('.chip[data-val]').forEach(c=>c.classList.toggle('active',c.dataset.val===v));renderAll();}
+function getFiltered(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const ef=document.getElementById('execFilter').value;
+  return tasks.filter(t=>{
+    if(filterPeriod!=='all'&&t.month!==filterPeriod)return false;
+    if(filterStatus==='overdue'){if(!(t.end&&t.end<today&&t.status!=='выполнено'))return false;}
+    else if(filterStatus!=='all'&&t.status!==filterStatus)return false;
+    if(ef&&t.exec!==ef)return false;
+    if(q&&!t.task.toLowerCase().includes(q)&&!(t.exec||'').toLowerCase().includes(q)&&!(t.coexec||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+
+// ═══ STATUS DROPDOWN ═══
+function toggleSD(e,id){
+  e.stopPropagation();
+  document.querySelectorAll('.status-dd.open').forEach(el=>el.classList.remove('open'));
+  ['sd-','sdm-'].forEach(p=>{const d=document.getElementById(p+id);if(d&&!d.classList.contains('open'))d.classList.add('open');});
+}
+document.addEventListener('click',()=>document.querySelectorAll('.status-dd.open').forEach(el=>el.classList.remove('open')));
+function setStatus(id,status){const t=tasks.find(t=>t.id===id);if(t){t.status=status;save();renderAll();}}
+
+// ═══ STATUS DD HTML ═══
+function sdHtml(id){
+  return`<div class="status-dd" id="sd-${id}">${['','не выполнено','в работе','выполнено'].map(s=>`<div class="status-opt" onclick="setStatus(${id},'${s}')"><span class="dot" style="background:${stDotClr(s)}"></span>${stLbl(s)}</div>`).join('')}</div>`;
+}
+function sdMHtml(id){
+  return`<div class="status-cell" style="position:relative;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="toggleSD(event,${id})">Статус ▾</button><div class="status-dd" id="sdm-${id}">${['','не выполнено','в работе','выполнено'].map(s=>`<div class="status-opt" onclick="setStatus(${id},'${s}')"><span class="dot" style="background:${stDotClr(s)}"></span>${stLbl(s)}</div>`).join('')}</div></div>`;
+}
+
+// ═══ RENDER ═══
+function renderAll(){
+  buildPeriodBtns(); buildExecFilter(); updateDL(); updateStats(); checkDeadlines();
+  const filtered=getFiltered();
+  const grouped={};filtered.forEach(t=>{if(!grouped[t.month])grouped[t.month]=[];grouped[t.month].push(t);});
+  const main=document.getElementById('mainContent');
+  if(!filtered.length){main.innerHTML='<div class="empty-state">Нет задач по выбранным фильтрам</div>';return;}
+  
+  const allUsedMonths = [...new Set(filtered.map(t=>t.month))].sort((a,b)=>parsePeriod(a)-parsePeriod(b));
+  
+  let html='';
+  allUsedMonths.forEach(month=>{
+    const list=grouped[month];if(!list)return;
+    const dn=list.filter(t=>t.status==='выполнено').length;
+    const pct=Math.round(dn/list.length*100);
+    html+=`<div class="month-group">
+      <div class="month-header">
+        <span class="month-label">${month}</span>
+        <div class="month-bar"></div>
+        <div class="month-meta"><span>${list.length} задач</span><span style="color:var(--green)">${pct}% выполнено</span></div>
+      </div>
+      <table class="tasks-table"><thead><tr>
+        <th class="col-num">№</th><th class="col-task">Задача</th><th class="col-created">Постановка</th><th class="col-date">Сроки</th>
+        <th class="col-exec">Исполнитель</th><th class="col-coexec">Соисполнитель</th>
+        <th class="col-status">Статус</th><th class="col-note">Примечание</th><th class="col-actions"></th>
+      </tr></thead><tbody>`;
+    list.forEach((t,i)=>{
+      const ov=t.end&&t.end<today&&t.status!=='выполнено';
+      const sc=stCls(t.status); const dis=isAdmin?'':'disabled';
+      html+=`<tr ${ov?'class="ov-row"':''}>
+        <td class="col-num">${i+1}</td>
+        <td class="col-task"><div class="task-text">${esc(t.task)}</div></td>
+        <td class="col-created">${fmtDate(t.created)}</td>
+        <td class="col-date"><div class="date-range"><span class="date-s">${fmtDate(t.start)}</span>${t.end?`<span class="date-e">→ ${fmtDate(t.end)}</span>`:''}</div></td>
+        <td class="col-exec">${t.exec?`<span class="person-tag">${esc(t.exec)}</span>`:''}</td>
+        <td class="col-coexec">${t.coexec?`<span class="coperson-tag">${esc(t.coexec)}</span>`:'<span style="color:var(--text-dim);font-size:11px">-</span>'}</td>
+        <td class="col-status status-cell">
+          <span class="status-badge ${sc}" onclick="${isAdmin?`toggleSD(event,${t.id})`:''}"><span class="dot"></span>${stLbl(t.status)}</span>
+          ${isAdmin?sdHtml(t.id):''}
+        </td>
+        <td class="col-note"><span class="note-text" onclick="${isAdmin?`editNote(event,${t.id})`:''}">${t.note?esc(t.note):'<span style="color:var(--text-dim)">-</span>'}</span></td>
+        <td class="col-actions">
+          <button class="act-btn" onclick="openEditModal(${t.id})" ${dis}>✎</button>
+          <button class="act-btn del" onclick="deleteTask(${t.id})" ${dis}>✕</button>
+        </td>
+      </tr>`;
+    });
+    html+=`</tbody></table><div class="mobile-cards">`;
+    list.forEach((t,i)=>{
+      const ov=t.end&&t.end<today&&t.status!=='выполнено';const sc=stCls(t.status);
+      html+=`<div class="task-card ${ov?'ov-row':''}">
+        <div class="card-top"><div class="card-task">${esc(t.task)}</div><span class="status-badge ${sc}"><span class="dot"></span>${stLbl(t.status)}</span></div>
+        <div class="card-meta">
+          ${t.created?`<span>📌 Поставлена: ${fmtDate(t.created)}</span>`:''}
+          ${t.start?`<span>📅 Сроки: ${fmtDate(t.start)}${t.end?' → '+fmtDate(t.end):''}</span>`:''}
+          ${t.exec?`<span>👤 ${esc(t.exec)}</span>`:''}
+          ${t.coexec?`<span>👥 ${esc(t.coexec)}</span>`:''}
+          ${t.note?`<span>💬 ${esc(t.note)}</span>`:''}
+        </div>
+        <div class="card-bottom">
+          <div style="display:flex;gap:6px;">${isAdmin?`<button class="act-btn" onclick="openEditModal(${t.id})">✎</button><button class="act-btn del" onclick="deleteTask(${t.id})">✕</button>`:''}</div>
+          ${isAdmin?sdMHtml(t.id):''}
+        </div>
+      </div>`;
+    });
+    html+=`</div></div>`;
+  });
+  main.innerHTML=html;
+}
+
+// ═══ NOTE INLINE ═══
+function editNote(e,id){
+  if(!isAdmin)return;
+  const cell=e.currentTarget.parentElement;const t=tasks.find(t=>t.id===id);
+  const inp=document.createElement('input');inp.type='text';inp.className='note-input';inp.value=t.note||'';
+  cell.innerHTML='';cell.appendChild(inp);inp.focus();
+  inp.addEventListener('blur',()=>{t.note=inp.value;save();renderAll();});
+  inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();});
+}
+
+// ═══ MODAL ═══
+function openAddModal(){
+  if(!isAdmin)return;editingId=null;
+  document.getElementById('modalTitle').textContent='Новая задача';
+  ['fTask','fStart','fEnd','fExec','fCoexec','fNote'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fStatus').value='';
+  document.getElementById('fMonth').value=MONTHS[new Date().getMonth()];
+  document.getElementById('fYear').value=new Date().getFullYear();
+  document.getElementById('fCreated').value=today;
+  document.getElementById('modal').classList.add('open');
+  setTimeout(()=>document.getElementById('fTask').focus(),80);
+}
+function openEditModal(id){
+  if(!isAdmin)return;editingId=id;const t=tasks.find(t=>t.id===id);
+  document.getElementById('modalTitle').textContent='Редактировать задачу';
+  const parts = (t.month||'').split(' ');
+  document.getElementById('fTask').value=t.task;
+  document.getElementById('fMonth').value=parts[0] || MONTHS[new Date().getMonth()];
+  document.getElementById('fYear').value=parts[1] || new Date().getFullYear();
+  document.getElementById('fCreated').value=t.created || '';
+  document.getElementById('fStatus').value=t.status;
+  document.getElementById('fStart').value=t.start;
+  document.getElementById('fEnd').value=t.end;
+  document.getElementById('fExec').value=t.exec;
+  document.getElementById('fCoexec').value=t.coexec;
+  document.getElementById('fNote').value=t.note;
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function saveTask(){
+  const task=document.getElementById('fTask').value.trim();
+  if(!task){toast('Введите описание задачи','error');document.getElementById('fTask').focus();return;}
+  
+  const m = document.getElementById('fMonth').value;
+  const y = document.getElementById('fYear').value;
+  const period = y ? `${m} ${y}` : m;
+  
+  const d={task, month:period, status:document.getElementById('fStatus').value,
+    created:document.getElementById('fCreated').value,
+    start:document.getElementById('fStart').value, end:document.getElementById('fEnd').value,
+    exec:document.getElementById('fExec').value.trim(), coexec:document.getElementById('fCoexec').value.trim(),
+    note:document.getElementById('fNote').value.trim()};
+    
+  if(editingId){Object.assign(tasks.find(t=>t.id===editingId),d);toast('Задача обновлена');}
+  else{tasks.push({id:nextId++,...d});toast('Задача добавлена');}
+  save();closeModal();renderAll();
+}
+function deleteTask(id){
+  if(!isAdmin)return;if(!confirm('Удалить задачу?'))return;
+  tasks=tasks.filter(t=>t.id!==id);save();renderAll();toast('Задача удалена','warn');
+}
+
+// ═══ STAFF ═══
+function addStaff(){
+  const name=document.getElementById('sfName').value.trim();if(!name){toast('Введите ФИО','error');return;}
+  staff.push({id:Date.now(),name,role:document.getElementById('sfRole').value.trim(),phone:document.getElementById('sfPhone').value.trim(),color:aColor(name)});
+  document.getElementById('sfName').value='';document.getElementById('sfRole').value='';document.getElementById('sfPhone').value='';
+  save();renderStaff();toast('Сотрудник добавлен');
+}
+function deleteStaff(id){
+  if(!isAdmin||!confirm('Удалить сотрудника?'))return;
+  staff=staff.filter(s=>s.id!==id);save();renderStaff();toast('Удалён','warn');
+}
+function renderStaff(){
+  const g=document.getElementById('staffGrid');
+  if(!staff.length){g.innerHTML='<div style="color:var(--text-dim);font-size:13px;">Справочник пуст.</div>';return;}
+  g.innerHTML=staff.map(s=>`<div class="staff-card">
+    <div class="staff-avatar" style="background:${s.color}22;color:${s.color}">${initials(s.name)}</div>
+    <div class="staff-info"><div class="staff-name">${esc(s.name)}</div><div class="staff-role">${esc(s.role||'-')}${s.phone?' · '+esc(s.phone):''}</div></div>
+    <button class="act-btn del" onclick="deleteStaff(${s.id})" ${isAdmin?'':'disabled'}>✕</button>
+  </div>`).join('');
+}
+
+// ═══ SETTINGS ═══
+function toggleSetting(key,el){settings[key]=!settings[key];el.classList.toggle('on',settings[key]);save();renderAll();}
+
+// ═══ EXPORT EXCEL ═══
+function exportExcel(){
+  const wb=XLSX.utils.book_new();
+  const months=[...new Set(tasks.map(t=>t.month))].sort((a,b)=>parsePeriod(a)-parsePeriod(b));
+  months.forEach(month=>{
+    const list=tasks.filter(t=>t.month===month);
+    const rows=[['№ п/п','Задача','Дата постановки','Начало','Окончание','Исполнитель','Соисполнитель','Примечания','Статус']];
+    list.forEach((t,i)=>rows.push([i+1,t.task,t.created||'',t.start||'',t.end||'',t.exec||'',t.coexec||'',t.note||'',t.status||'']));
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:5},{wch:60},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20},{wch:22},{wch:15}];
+    XLSX.utils.book_append_sheet(wb,ws,month);
+  });
+  // Итоговый лист
+  const sumRows=[['Месяц','Всего','Выполнено','В работе','Не выполнено','% выполнения']];
+  months.forEach(m=>{const l=tasks.filter(t=>t.month===m);const d=l.filter(t=>t.status==='выполнено').length;
+    sumRows.push([m,l.length,d,l.filter(t=>t.status==='в работе').length,l.filter(t=>t.status==='не выполнено').length,l.length?Math.round(d/l.length*100)+'%':'0%']);});
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sumRows),'Итого');
+  XLSX.writeFile(wb,'Протокол_задач.xlsx');toast('Файл Excel готов');
+}
+
+// ═══ EXPORT JSON ═══
+function exportJSON(){
+  const blob=new Blob([JSON.stringify({tasks,staff},null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='protocol.json';a.click();
+  toast('JSON экспортирован');
+}
+
+// ═══ IMPORT ═══
+function importFile(input){
+  const file=input.files[0];if(!file)return;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(ext==='json'){
+    const r=new FileReader();r.onload=e=>{
+      try{const d=JSON.parse(e.target.result);
+        if(d.tasks){tasks=d.tasks;nextId=Math.max(...tasks.map(t=>t.id||0))+1;}
+        if(d.staff)staff=d.staff;
+        save();renderAll();toast(`Импортировано ${tasks.length} задач`);
+      }catch{toast('Ошибка JSON','error');}
+    };r.readAsText(file);
+  }else if(ext==='xlsx'){
+    const r=new FileReader();r.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const nt=[];
+        wb.SheetNames.filter(n=>n!=='Итого').forEach(sn=>{
+          const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1});
+          const headers=rows[0]||[];
+          const map={}; headers.forEach((h,idx)=>{if(h)map[String(h).trim().toLowerCase()]=idx;});
+          
+          const getIdx = (keys, def) => {
+            const found = Object.keys(map).find(mk => keys.some(k => mk.includes(k)));
+            return found !== undefined ? map[found] : def;
+          };
+          
+          const iTask = getIdx(['задач'], 1);
+          const iCreated = getIdx(['постановк', 'создан'], -1); // Если колонки нет, будет -1
+          const iStart = getIdx(['начал'], 2);
+          const iEnd = getIdx(['оконча'], 3);
+          const iExec = getIdx(['исполн'], 4);
+          const iCoexec = getIdx(['соисполн'], 5);
+          const iNote = getIdx(['примеч'], 6);
+          const iStatus = getIdx(['статус'], 7);
+
+          rows.slice(1).forEach(r=>{
+            if(!r[iTask])return;
+            const fd=v=>{if(!v)return'';if(typeof v==='number'){return new Date(Math.round((v-25569)*86400*1000)).toISOString().slice(0,10);}return String(v).includes('-')?String(v).slice(0,10):'';};
+            
+            nt.push({
+              id:nextId++,
+              month:sn,
+              task:String(r[iTask]||''),
+              created:iCreated >= 0 ? fd(r[iCreated]) : '',
+              start:fd(r[iStart]),
+              end:fd(r[iEnd]),
+              exec:String(r[iExec]||''),
+              coexec:String(r[iCoexec]||''),
+              note:String(r[iNote]||''),
+              status:String(r[iStatus]||'')
+            });
+          });
+        });
+        if(nt.length&&confirm(`Найдено ${nt.length} задач. Заменить текущие данные?`)){tasks=nt;save();renderAll();toast(`Импортировано ${nt.length} задач`);}
+        else if(!nt.length)toast('Задачи не найдены','warn');
+      }catch(err){toast('Ошибка XLSX: '+err.message,'error');}
+    };r.readAsArrayBuffer(file);
+  }
+  input.value='';
+}
+
+function clearAll(){if(!confirm('Удалить ВСЕ данные? Это необратимо.'))return;tasks=[];staff=[];nextId=1;save();renderAll();renderStaff();toast('Очищено','warn');}
+
+// ═══ KEYBOARD ═══
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.metaKey||e.ctrlKey)&&e.key==='n'){e.preventDefault();openAddModal();}});
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+
+// ═══ INIT ═══
+load();
+if(!tasks.length)initDefaults();
+renderAll();
+</script>
+</body>
+</html>
