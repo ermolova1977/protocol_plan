@@ -83,6 +83,7 @@ main{padding:0 24px 80px;}
 .col-exec{width:115px;}
 .col-coexec{width:115px;}
 .col-status{width:138px;}
+.col-priority{width:90px;}
 .col-note{width:110px;}
 .col-actions{width:66px;text-align:center;}
 .task-text{font-size:13px;line-height:1.5;}
@@ -108,6 +109,14 @@ main{padding:0 24px 80px;}
 .status-opt{padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s;}
 .status-opt:hover{background:rgba(255,255,255,.05);}
 .status-opt .dot{width:6px;height:6px;border-radius:50%;}
+
+/* ПРИОРИТЕТЫ */
+.pr-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;text-transform:uppercase;letter-spacing:0.05em;display:inline-block;white-space:nowrap;}
+.pr-high{background:rgba(255,94,87,.15);color:var(--red);border:1px solid rgba(255,94,87,.3);}
+.pr-med{background:rgba(255,159,67,.15);color:var(--orange);border:1px solid rgba(255,159,67,.3);}
+.pr-low{background:rgba(84,160,255,.15);color:var(--blue);border:1px solid rgba(84,160,255,.3);}
+.pr-none{background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);}
+
 .act-btn{background:var(--surface2);border:1px solid var(--border);width:32px;height:32px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);transition:all .12s;font-size:13px;}
 .act-btn:hover{background:var(--surface3);color:var(--text);}
 .act-btn.del:hover{background:rgba(255,94,87,.12);color:var(--red);}
@@ -142,7 +151,7 @@ main{padding:0 24px 80px;}
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;}
 .modal-overlay.open{display:flex;}
-.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:mIn .2s ease;position:relative;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:600px;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:mIn .2s ease;position:relative;}
 @keyframes mIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
 .modal-title{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;margin-bottom:18px;}
 .modal-close{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;line-height:1;padding:4px;}
@@ -206,7 +215,7 @@ textarea{resize:vertical;min-height:68px;}
   .tasks-table th, .tasks-table td { border: 1px solid #000 !important; color: #000 !important; padding: 6px !important; font-size: 11px !important; }
   .tasks-table thead th { background: #f0f0f0 !important; }
   .mobile-cards { display: none !important; }
-  .status-badge { border: none !important; background: transparent !important; color: #000 !important; padding: 0 !important; }
+  .status-badge, .pr-badge { border: none !important; background: transparent !important; color: #000 !important; padding: 0 !important; }
   .status-badge .dot { display: none !important; }
   .person-tag, .coperson-tag { color: #000 !important; }
   .date-s, .date-e { color: #000 !important; }
@@ -216,7 +225,7 @@ textarea{resize:vertical;min-height:68px;}
 @media(max-width:768px){
   .tasks-table{display:none!important;}
   .mobile-cards{display:block;}
-  .col-coexec,.col-note,.col-created{display:none;}
+  .col-coexec,.col-note,.col-created,.col-priority{display:none;}
   header{padding:0 16px;}
   .toolbar,.filter-row,.period-bar,main{padding-left:16px;padding-right:16px;}
   .progress-section,.deadline-banner{margin-left:16px;margin-right:16px;}
@@ -392,6 +401,15 @@ textarea{resize:vertical;min-height:68px;}
           <option value="выполнено">Выполнено</option>
         </select>
       </div>
+      <div class="form-group">
+        <label>Приоритет</label>
+        <select id="fPriority">
+          <option value="">- Без приоритета</option>
+          <option value="низкий">Низкий</option>
+          <option value="средний">Средний</option>
+          <option value="высокий">Высокий</option>
+        </select>
+      </div>
       <div class="form-group"><label>Дата постановки</label><input type="date" id="fCreated"></div>
       <div class="form-group"><label>Начало работы</label><input type="date" id="fStart"></div>
       <div class="form-group"><label>Окончание работы</label><input type="date" id="fEnd"></div>
@@ -408,32 +426,17 @@ textarea{resize:vertical;min-height:68px;}
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// ═══ НАСТРОЙКИ БАЗЫ ДАННЫХ (FIREBASE) ═══
+const MY_CLOUD_CONFIG = {
+  apiKey: "AIzaSyBxuLe89FgLLsL1dhjXvUi62AmlN4gNzMM",
+  authDomain: "protocol-3e05a.firebaseapp.com",
+  projectId: "protocol-3e05a",
+  storageBucket: "protocol-3e05a.firebasestorage.app",
+  messagingSenderId: "796369583957",
+  appId: "1:796369583957:web:5801866fad01e1c20e39dc"
+};
 
-let isCloudMode = false;
-let db = null;
-let auth = null;
-let appId = 'default-app-id';
-
-try {
-  const fConfigStr = typeof window !== 'undefined' && window.__firebase_config ? window.__firebase_config : (typeof __firebase_config !== 'undefined' ? __firebase_config : null);
-  if (fConfigStr) {
-    const config = JSON.parse(fConfigStr);
-    if (Object.keys(config).length > 0) {
-      const app = initializeApp(config);
-      auth = getAuth(app);
-      db = getFirestore(app);
-      appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
-      isCloudMode = true;
-    }
-  }
-} catch (e) {
-  console.warn("Cloud config error - fallback to local mode", e);
-}
-
-// ═══ STATE ═══
+// ═══ STATE & CONSTANTS ═══
 let tasks=[], staff=[], nextId=1, editingId=null;
 let filterStatus='all', filterPeriod='all', isAdmin=true;
 let settings={showOverdue:true, warnDays:true};
@@ -442,71 +445,108 @@ const ACLRS=['#6c63ff','#ff6584','#3ecf8e','#ff9f43','#54a0ff','#f5c842','#ff5e5
 const today=new Date().toISOString().slice(0,10);
 const plus3=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
 
-// ═══ PERSIST (CLOUD & LOCAL SYNC) ═══
+// ═══ EXPOSE FUNCTIONS TO WINDOW FOR HTML BINDINGS ═══
+window.showTab = showTab;
+window.toggleRole = toggleRole;
+window.setPeriod = setPeriod;
+window.setFilter = setFilter;
+window.toggleSD = toggleSD;
+window.setStatus = setStatus;
+window.editNote = editNote;
+window.openAddModal = openAddModal;
+window.openEditModal = openEditModal;
+window.closeModal = closeModal;
+window.deleteTask = deleteTask;
+window.addStaff = addStaff;
+window.deleteStaff = deleteStaff;
+window.toggleSetting = toggleSetting;
+window.exportExcel = exportExcel;
+window.exportJSON = exportJSON;
+window.importFile = importFile;
+window.clearAll = clearAll;
+window.toggleDictation = toggleDictation;
+window.renderAll = renderAll;
+
+// ═══ CLOUD VARIABLES ═══
+let isCloudMode = false;
 let isReady = false;
 let currentUser = null;
+let db = null;
+let fbSetDoc = null;
+let fbDoc = null;
+let docPathArgs = [];
 
-async function save(){
-  if (isCloudMode && currentUser) {
-    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker', 'mainState');
+// ═══ SAVE LOGIC (CLOUD + LOCAL) ═══
+window.saveTask = async function() {
+  const task = document.getElementById('fTask').value.trim();
+  if(!task){ toast('Введите описание задачи','error'); document.getElementById('fTask').focus(); return; }
+  
+  const m = document.getElementById('fMonth').value;
+  const y = document.getElementById('fYear').value;
+  const period = y ? `${m} ${y}` : m;
+  
+  const d = {
+    task, 
+    month:period, 
+    status:document.getElementById('fStatus').value,
+    priority:document.getElementById('fPriority').value,
+    created:document.getElementById('fCreated').value,
+    start:document.getElementById('fStart').value, 
+    end:document.getElementById('fEnd').value,
+    exec:document.getElementById('fExec').value.trim(), 
+    coexec:document.getElementById('fCoexec').value.trim(),
+    note:document.getElementById('fNote').value.trim()
+  };
+    
+  if(editingId){ Object.assign(tasks.find(t=>t.id===editingId),d); toast('Задача обновлена'); }
+  else { tasks.push({id:nextId++, ...d}); toast('Задача добавлена'); }
+  
+  closeModal();
+
+  if (isCloudMode && currentUser && db && fbSetDoc && fbDoc) {
     try {
-      await setDoc(docRef, {
+      const docRef = fbDoc(db, ...docPathArgs);
+      await fbSetDoc(docRef, {
         tasks: JSON.stringify(tasks),
         staff: JSON.stringify(staff),
         settings: JSON.stringify(settings),
         updatedAt: new Date().toISOString()
       });
-    } catch (e) {
-      console.error("Save error:", e);
-      toast('Ошибка сохранения в облако', 'error');
+    } catch(e) {
+      console.error("Cloud save error:", e);
+      saveLocal(); 
     }
   } else {
-    localStorage.setItem('pt',JSON.stringify(tasks));
-    localStorage.setItem('ps',JSON.stringify(staff));
-    localStorage.setItem('pse',JSON.stringify(settings));
+    saveLocal();
   }
-}
+  renderAll();
+};
 
-function loadLocal() {
-  try {
-    const t=localStorage.getItem('pt'),s=localStorage.getItem('ps'),se=localStorage.getItem('pse');
-    if(t)tasks=JSON.parse(t); if(s)staff=JSON.parse(s); if(se)settings={...settings,...JSON.parse(se)};
-    nextId=tasks.length?Math.max(...tasks.map(x=>x.id))+1:1;
-    return !!t;
-  } catch(e) { return false; }
+function saveLocal() {
+  localStorage.setItem('pt',JSON.stringify(tasks));
+  localStorage.setItem('ps',JSON.stringify(staff));
+  localStorage.setItem('pse',JSON.stringify(settings));
 }
 
 function initDefaults(){
   staff=[{id:1,name:'Куриленко З.В.',role:'Директор',phone:'',color:ACLRS[0]},{id:2,name:'Ермолова Е.В.',role:'Менеджер',phone:'',color:ACLRS[1]}];
   const cy = new Date().getFullYear();
   tasks=[
-    {id:1,month:`Январь ${cy}`,task:'Составить, согласовать и подписать Партнерское соглашение с участниками проекта',created:'2026-01-01',start:'2026-01-04',end:'2026-01-15',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено'},
-    {id:2,month:`Январь ${cy}`,task:'Подобрать офис и заключить договор аренды',created:'2026-01-01',start:'2026-01-12',end:'2026-03-31',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено'},
-    {id:3,month:`Январь ${cy}`,task:'Зарегистрировать юридическое лицо ООО "Девелопмент групп"',created:'2026-01-01',start:'2026-01-19',end:'2026-01-31',exec:'Куриленко З.В.',coexec:'Ермолова Е.В.',note:'',status:'в работе'},
-    {id:4,month:`Январь ${cy}`,task:'Провести переговоры с ООО "Азимут-Плюс" на предмет абонентского обслуживания в части градостроительного анализа',created:'2026-01-01',start:'2026-01-12',end:'2026-01-16',exec:'Ермолова Е.В.',coexec:'Куриленко З.В.',note:'',status:'в работе'},
-    {id:5,month:`Январь ${cy}`,task:'Провести переговоры со Сбербанком и Экспобанком на предмет соответствия SPV-компании требованиям банка',created:'2026-01-01',start:'2026-01-12',end:'2026-01-26',exec:'Ермолова Е.В.',coexec:'',note:'',status:''},
-    {id:6,month:`Январь ${cy}`,task:'Отобрать земельный участок для инвестиционного проекта',created:'2026-01-01',start:'2026-01-04',end:'2026-01-31',exec:'',coexec:'',note:'',status:''},
-    {id:7,month:`Январь ${cy}`,task:'Согласовать с партнерами ТЭПы, финмодель и старт проекта',created:'2026-01-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:8,month:`Январь ${cy}`,task:'Подготовить универсальное ТЗ для подбора ЗУ для внешних пользователей',created:'2026-01-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:9,month:`Февраль ${cy}`,task:'Зарегистрировать SPV-компанию',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:10,month:`Февраль ${cy}`,task:'Подготовить и утвердить необходимые Положения, регламенты, учетные политики и инструкции, структуру, штатное расписание SPV-компании',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:11,month:`Февраль ${cy}`,task:'Отдать в банк пакет документов для предварительного анализа проекта',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:12,month:`Февраль ${cy}`,task:'Разработать и утвердить дорожную карту проекта',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:13,month:`Февраль ${cy}`,task:'Заключить договор на разработку концепции с проектной организацией',created:'2026-02-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:14,month:`Март ${cy}`,task:'Заключить договор на проектирование с проектной организацией',created:'2026-03-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
-    {id:15,month:`Март ${cy}`,task:'Обустроить офис и переехать',created:'2026-03-01',start:'',end:'',exec:'',coexec:'',note:'',status:''},
+    {id:1,month:`Январь ${cy}`,task:'Составить, согласовать и подписать Партнерское соглашение с участниками проекта',created:'2026-01-01',start:'2026-01-04',end:'2026-01-15',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено',priority:'высокий'},
+    {id:2,month:`Январь ${cy}`,task:'Подобрать офис и заключить договор аренды',created:'2026-01-01',start:'2026-01-12',end:'2026-03-31',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено',priority:'средний'},
+    {id:3,month:`Январь ${cy}`,task:'Зарегистрировать юридическое лицо ООО "Девелопмент групп"',created:'2026-01-01',start:'2026-01-19',end:'2026-01-31',exec:'Куриленко З.В.',coexec:'Ермолова Е.В.',note:'',status:'в работе',priority:''}
   ];
-  nextId=16; save();
+  nextId=4; 
+  saveLocal();
 }
 
-// ═══ TABS ═══
+// ═══ CORE UI FUNCTIONS ═══
 function showTab(n){
   ['tasks','staff','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===n?'':'none');
   document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['tasks','staff','settings'][i]===n));
   if(n==='staff')renderStaff();
 }
 
-// ═══ ROLE ═══
 function toggleRole(){
   isAdmin=!isAdmin;
   const b=document.getElementById('roleBtn');
@@ -518,19 +558,20 @@ function toggleRole(){
   renderAll(); toast(isAdmin?'👑 Режим администратора':'👁 Режим наблюдателя',isAdmin?'success':'warn');
 }
 
-// ═══ HELPERS ═══
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmtDate(d){if(!d)return'-';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
 function stCls(s){return s==='выполнено'?'st-done':s==='в работе'?'st-progress':s==='не выполнено'?'st-todo':'st-none';}
 function stLbl(s){return s||'- Нет статуса';}
 function stDotClr(s){return s==='выполнено'?'var(--green)':s==='в работе'?'var(--orange)':s==='не выполнено'?'var(--red)':'var(--text-dim)';}
+
+// функции для бейджей приоритета
+function prCls(p){return p==='высокий'?'pr-high':p==='средний'?'pr-med':p==='низкий'?'pr-low':'pr-none';}
+function prLbl(p){return p?esc(p):'без приоритета';}
+
 function initials(n){return(n||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
 function aColor(n){let h=0;for(const c of(n||''))h=(h*31+c.charCodeAt(0))%ACLRS.length;return ACLRS[h];}
-
-// ═══ TOAST ═══
 function toast(msg,type='success'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2600);}
 
-// ═══ PERIOD SORTING ═══
 function parsePeriod(p){
   if(!p) return 0;
   const parts = p.split(' ');
@@ -539,7 +580,6 @@ function parsePeriod(p){
   return y * 12 + (m >= 0 ? m : 0);
 }
 
-// ═══ PERIOD ═══
 function buildPeriodBtns(){
   const used=[...new Set(tasks.map(t=>t.month))].sort((a,b)=>parsePeriod(a)-parsePeriod(b));
   document.getElementById('periodBtns').innerHTML=
@@ -548,17 +588,14 @@ function buildPeriodBtns(){
 }
 function setPeriod(m){filterPeriod=m;renderAll();}
 
-// ═══ EXEC FILTER ═══
 function buildExecFilter(){
   const sel=document.getElementById('execFilter'),cur=sel.value;
   const execs=[...new Set(tasks.map(t=>t.exec).filter(Boolean))].sort();
   sel.innerHTML='<option value="">Все исполнители</option>'+execs.map(e=>`<option value="${esc(e)}"${cur===e?' selected':''}>${esc(e)}</option>`).join('');
 }
 
-// ═══ DATALIST ═══
 function updateDL(){document.getElementById('staffList').innerHTML=staff.map(s=>`<option value="${esc(s.name)}">`).join('');}
 
-// ═══ DEADLINES ═══
 function checkDeadlines(){
   const ov=tasks.filter(t=>t.end&&t.end<today&&t.status!=='выполнено');
   const wn=tasks.filter(t=>t.end&&t.end>=today&&t.end<=plus3&&t.status!=='выполнено');
@@ -573,7 +610,6 @@ function checkDeadlines(){
   }else{banner.classList.add('hidden');}
 }
 
-// ═══ STATS ═══
 function updateStats(){
   const dn=tasks.filter(t=>t.status==='выполнено').length;
   const pr=tasks.filter(t=>t.status==='в работе').length;
@@ -592,7 +628,6 @@ function updateStats(){
   document.getElementById('segTodo').style.width=(td/total*100||0)+'%';
 }
 
-// ═══ FILTER ═══
 function setFilter(v){filterStatus=v;document.querySelectorAll('.chip[data-val]').forEach(c=>c.classList.toggle('active',c.dataset.val===v));renderAll();}
 function getFiltered(){
   const q=document.getElementById('searchInput').value.toLowerCase();
@@ -607,16 +642,35 @@ function getFiltered(){
   });
 }
 
-// ═══ STATUS DROPDOWN ═══
 function toggleSD(e,id){
   e.stopPropagation();
   document.querySelectorAll('.status-dd.open').forEach(el=>el.classList.remove('open'));
   ['sd-','sdm-'].forEach(p=>{const d=document.getElementById(p+id);if(d&&!d.classList.contains('open'))d.classList.add('open');});
 }
 document.addEventListener('click',()=>document.querySelectorAll('.status-dd.open').forEach(el=>el.classList.remove('open')));
-function setStatus(id,status){const t=tasks.find(t=>t.id===id);if(t){t.status=status;save();renderAll();}}
 
-// ═══ STATUS DD HTML ═══
+function setStatus(id,status){
+  const t=tasks.find(t=>t.id===id);
+  if(t){
+    t.status=status; 
+    if(isCloudMode) {
+       window.saveTask_internal_status_update();
+    } else {
+       saveLocal(); 
+    }
+    renderAll();
+  }
+}
+
+window.saveTask_internal_status_update = async function() {
+    if (isCloudMode && currentUser && db && fbSetDoc && fbDoc) {
+      try {
+        const docRef = fbDoc(db, ...docPathArgs);
+        await fbSetDoc(docRef, { tasks: JSON.stringify(tasks), staff: JSON.stringify(staff), settings: JSON.stringify(settings), updatedAt: new Date().toISOString() });
+      } catch(e) {}
+    } else saveLocal();
+}
+
 function sdHtml(id){
   return`<div class="status-dd" id="sd-${id}">${['','не выполнено','в работе','выполнено'].map(s=>`<div class="status-opt" onclick="setStatus(${id},'${s}')"><span class="dot" style="background:${stDotClr(s)}"></span>${stLbl(s)}</div>`).join('')}</div>`;
 }
@@ -624,7 +678,6 @@ function sdMHtml(id){
   return`<div class="status-cell" style="position:relative;"><button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="toggleSD(event,${id})">Статус ▾</button><div class="status-dd" id="sdm-${id}">${['','не выполнено','в работе','выполнено'].map(s=>`<div class="status-opt" onclick="setStatus(${id},'${s}')"><span class="dot" style="background:${stDotClr(s)}"></span>${stLbl(s)}</div>`).join('')}</div></div>`;
 }
 
-// ═══ RENDER ═══
 function renderAll(){
   buildPeriodBtns(); buildExecFilter(); updateDL(); updateStats(); checkDeadlines();
   const filtered=getFiltered();
@@ -648,7 +701,7 @@ function renderAll(){
       <table class="tasks-table"><thead><tr>
         <th class="col-num">№</th><th class="col-task">Задача</th><th class="col-created">Постановка</th><th class="col-date">Сроки</th>
         <th class="col-exec">Исполнитель</th><th class="col-coexec">Соисполнитель</th>
-        <th class="col-status">Статус</th><th class="col-note">Примечание</th><th class="col-actions"></th>
+        <th class="col-status">Статус</th><th class="col-priority">Приоритет</th><th class="col-note">Примечание</th><th class="col-actions"></th>
       </tr></thead><tbody>`;
     list.forEach((t,i)=>{
       const ov=t.end&&t.end<today&&t.status!=='выполнено';
@@ -664,6 +717,7 @@ function renderAll(){
           <span class="status-badge ${sc}" onclick="${isAdmin?`toggleSD(event,${t.id})`:''}"><span class="dot"></span>${stLbl(t.status)}</span>
           ${isAdmin?sdHtml(t.id):''}
         </td>
+        <td class="col-priority"><span class="pr-badge ${prCls(t.priority)}">${prLbl(t.priority)}</span></td>
         <td class="col-note"><span class="note-text" onclick="${isAdmin?`editNote(event,${t.id})`:''}">${t.note?esc(t.note):'<span style="color:var(--text-dim)">-</span>'}</span></td>
         <td class="col-actions">
           <button class="act-btn" onclick="openEditModal(${t.id})" ${dis}>✎</button>
@@ -675,7 +729,13 @@ function renderAll(){
     list.forEach((t,i)=>{
       const ov=t.end&&t.end<today&&t.status!=='выполнено';const sc=stCls(t.status);
       html+=`<div class="task-card ${ov?'ov-row':''}">
-        <div class="card-top"><div class="card-task">${esc(t.task)}</div><span class="status-badge ${sc}"><span class="dot"></span>${stLbl(t.status)}</span></div>
+        <div class="card-top">
+          <div class="card-task">${esc(t.task)}</div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+            <span class="status-badge ${sc}"><span class="dot"></span>${stLbl(t.status)}</span>
+            <span class="pr-badge ${prCls(t.priority)}">${prLbl(t.priority)}</span>
+          </div>
+        </div>
         <div class="card-meta">
           ${t.created?`<span>📌 Поставлена: ${fmtDate(t.created)}</span>`:''}
           ${t.start?`<span>📅 Сроки: ${fmtDate(t.start)}${t.end?' → '+fmtDate(t.end):''}</span>`:''}
@@ -694,17 +754,20 @@ function renderAll(){
   main.innerHTML=html;
 }
 
-// ═══ NOTE INLINE ═══
 function editNote(e,id){
   if(!isAdmin)return;
   const cell=e.currentTarget.parentElement;const t=tasks.find(t=>t.id===id);
   const inp=document.createElement('input');inp.type='text';inp.className='note-input';inp.value=t.note||'';
   cell.innerHTML='';cell.appendChild(inp);inp.focus();
-  inp.addEventListener('blur',()=>{t.note=inp.value;save();renderAll();});
+  inp.addEventListener('blur',()=>{
+     t.note=inp.value; 
+     if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+     renderAll();
+  });
   inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();});
 }
 
-// ═══ SPEECH RECOGNITION ═══
+// ═══ MODAL AND SPEECH ═══
 let speechRecognition = null;
 let isRecording = false;
 
@@ -725,53 +788,31 @@ function initSpeech() {
     speechRecognition.onresult = (event) => {
       let finalTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript + ' ';
-        }
+        if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript + ' ';
       }
       const taskInput = document.getElementById('fTask');
       const currentVal = taskInput.value.trim();
       const newText = finalTranscript.trim();
-      if(newText) {
-        taskInput.value = currentVal ? currentVal + ' ' + newText : newText;
-      }
+      if(newText) taskInput.value = currentVal ? currentVal + ' ' + newText : newText;
     };
 
     speechRecognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error === 'not-allowed') {
-        toast('❌ Нет доступа к микрофону', 'error');
-      } else if (event.error !== 'no-speech') {
-        toast('Ошибка распознавания: ' + event.error, 'error');
-      }
+      if (event.error === 'not-allowed') toast('❌ Нет доступа к микрофону', 'error');
+      else if (event.error !== 'no-speech') toast('Ошибка распознавания: ' + event.error, 'error');
       stopDictation();
     };
 
-    speechRecognition.onend = () => {
-      stopDictation();
-    };
+    speechRecognition.onend = () => stopDictation();
   } else {
-    // Hide mic button if browser doesn't support it
     const micBtn = document.getElementById('micBtn');
     if (micBtn) micBtn.style.display = 'none';
   }
 }
 
 function toggleDictation() {
-  if (!speechRecognition) {
-    toast('Ваш браузер не поддерживает голосовой ввод', 'warn');
-    return;
-  }
-  if (isRecording) {
-    speechRecognition.stop();
-  } else {
-    try {
-      speechRecognition.start();
-    } catch(e) {
-      console.error('Не удалось запустить распознавание', e);
-      speechRecognition.stop();
-    }
-  }
+  if (!speechRecognition) { toast('Браузер не поддерживает голосовой ввод', 'warn'); return; }
+  if (isRecording) { speechRecognition.stop(); } 
+  else { try { speechRecognition.start(); } catch(e) { speechRecognition.stop(); } }
 }
 
 function stopDictation() {
@@ -780,19 +821,19 @@ function stopDictation() {
   if (btn) btn.classList.remove('mic-active');
 }
 
-// ═══ MODAL ═══
 function openAddModal(){
   if(!isAdmin)return;editingId=null;
   document.getElementById('modalTitle').textContent='Новая задача';
   ['fTask','fStart','fEnd','fExec','fCoexec','fNote'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fStatus').value='';
+  document.getElementById('fPriority').value='';
   document.getElementById('fMonth').value=MONTHS[new Date().getMonth()];
   document.getElementById('fYear').value=new Date().getFullYear();
   document.getElementById('fCreated').value=today;
-  stopDictation(); // Сбрасываем микрофон, если был включен
-  document.getElementById('modal').classList.add('open');
+  stopDictation(); document.getElementById('modal').classList.add('open');
   setTimeout(()=>document.getElementById('fTask').focus(),80);
 }
+
 function openEditModal(id){
   if(!isAdmin)return;editingId=id;const t=tasks.find(t=>t.id===id);
   document.getElementById('modalTitle').textContent='Редактировать задачу';
@@ -801,53 +842,41 @@ function openEditModal(id){
   document.getElementById('fMonth').value=parts[0] || MONTHS[new Date().getMonth()];
   document.getElementById('fYear').value=parts[1] || new Date().getFullYear();
   document.getElementById('fCreated').value=t.created || '';
-  document.getElementById('fStatus').value=t.status;
+  document.getElementById('fStatus').value=t.status || '';
+  document.getElementById('fPriority').value=t.priority || '';
   document.getElementById('fStart').value=t.start;
   document.getElementById('fEnd').value=t.end;
   document.getElementById('fExec').value=t.exec;
   document.getElementById('fCoexec').value=t.coexec;
   document.getElementById('fNote').value=t.note;
-  stopDictation(); // Сбрасываем микрофон, если был включен
-  document.getElementById('modal').classList.add('open');
-}
-function closeModal(){
-  stopDictation(); // Отключаем микрофон при закрытии окна
-  if (isRecording && speechRecognition) speechRecognition.stop();
-  document.getElementById('modal').classList.remove('open');
-}
-function saveTask(){
-  const task=document.getElementById('fTask').value.trim();
-  if(!task){toast('Введите описание задачи','error');document.getElementById('fTask').focus();return;}
-  
-  const m = document.getElementById('fMonth').value;
-  const y = document.getElementById('fYear').value;
-  const period = y ? `${m} ${y}` : m;
-  
-  const d={task, month:period, status:document.getElementById('fStatus').value,
-    created:document.getElementById('fCreated').value,
-    start:document.getElementById('fStart').value, end:document.getElementById('fEnd').value,
-    exec:document.getElementById('fExec').value.trim(), coexec:document.getElementById('fCoexec').value.trim(),
-    note:document.getElementById('fNote').value.trim()};
-    
-  if(editingId){Object.assign(tasks.find(t=>t.id===editingId),d);toast('Задача обновлена');}
-  else{tasks.push({id:nextId++,...d});toast('Задача добавлена');}
-  save();closeModal();renderAll();
-}
-function deleteTask(id){
-  if(!isAdmin)return;if(!confirm('Удалить задачу?'))return;
-  tasks=tasks.filter(t=>t.id!==id);save();renderAll();toast('Задача удалена','warn');
+  stopDictation(); document.getElementById('modal').classList.add('open');
 }
 
-// ═══ STAFF ═══
+function closeModal(){
+  stopDictation(); if (isRecording && speechRecognition) speechRecognition.stop();
+  document.getElementById('modal').classList.remove('open');
+}
+
+function deleteTask(id){
+  if(!isAdmin)return;if(!confirm('Удалить задачу?'))return;
+  tasks=tasks.filter(t=>t.id!==id); 
+  if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+  renderAll(); toast('Задача удалена','warn');
+}
+
+// ═══ STAFF & SETTINGS ═══
 function addStaff(){
   const name=document.getElementById('sfName').value.trim();if(!name){toast('Введите ФИО','error');return;}
   staff.push({id:Date.now(),name,role:document.getElementById('sfRole').value.trim(),phone:document.getElementById('sfPhone').value.trim(),color:aColor(name)});
   document.getElementById('sfName').value='';document.getElementById('sfRole').value='';document.getElementById('sfPhone').value='';
-  save();renderStaff();toast('Сотрудник добавлен');
+  if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+  renderStaff(); toast('Сотрудник добавлен');
 }
 function deleteStaff(id){
   if(!isAdmin||!confirm('Удалить сотрудника?'))return;
-  staff=staff.filter(s=>s.id!==id);save();renderStaff();toast('Удалён','warn');
+  staff=staff.filter(s=>s.id!==id);
+  if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+  renderStaff(); toast('Удалён','warn');
 }
 function renderStaff(){
   const g=document.getElementById('staffGrid');
@@ -858,23 +887,24 @@ function renderStaff(){
     <button class="act-btn del" onclick="deleteStaff(${s.id})" ${isAdmin?'':'disabled'}>✕</button>
   </div>`).join('');
 }
+function toggleSetting(key,el){
+  settings[key]=!settings[key];el.classList.toggle('on',settings[key]);
+  if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+  renderAll();
+}
 
-// ═══ SETTINGS ═══
-function toggleSetting(key,el){settings[key]=!settings[key];el.classList.toggle('on',settings[key]);save();renderAll();}
-
-// ═══ EXPORT EXCEL ═══
+// ═══ EXPORT / IMPORT / CLEAR ═══
 function exportExcel(){
   const wb=XLSX.utils.book_new();
   const months=[...new Set(tasks.map(t=>t.month))].sort((a,b)=>parsePeriod(a)-parsePeriod(b));
   months.forEach(month=>{
     const list=tasks.filter(t=>t.month===month);
-    const rows=[['№ п/п','Задача','Дата постановки','Начало','Окончание','Исполнитель','Соисполнитель','Примечания','Статус']];
-    list.forEach((t,i)=>rows.push([i+1,t.task,t.created||'',t.start||'',t.end||'',t.exec||'',t.coexec||'',t.note||'',t.status||'']));
+    const rows=[['№ п/п','Задача','Дата постановки','Начало','Окончание','Исполнитель','Соисполнитель','Приоритет','Примечания','Статус']];
+    list.forEach((t,i)=>rows.push([i+1,t.task,t.created||'',t.start||'',t.end||'',t.exec||'',t.coexec||'',t.priority||'',t.note||'',t.status||'']));
     const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:5},{wch:60},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20},{wch:22},{wch:15}];
+    ws['!cols']=[{wch:5},{wch:60},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20},{wch:15},{wch:22},{wch:15}];
     XLSX.utils.book_append_sheet(wb,ws,month);
   });
-  // Итоговый лист
   const sumRows=[['Месяц','Всего','Выполнено','В работе','Не выполнено','% выполнения']];
   months.forEach(m=>{const l=tasks.filter(t=>t.month===m);const d=l.filter(t=>t.status==='выполнено').length;
     sumRows.push([m,l.length,d,l.filter(t=>t.status==='в работе').length,l.filter(t=>t.status==='не выполнено').length,l.length?Math.round(d/l.length*100)+'%':'0%']);});
@@ -882,14 +912,12 @@ function exportExcel(){
   XLSX.writeFile(wb,'Протокол_задач.xlsx');toast('Файл Excel готов');
 }
 
-// ═══ EXPORT JSON ═══
 function exportJSON(){
   const blob=new Blob([JSON.stringify({tasks,staff},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='protocol.json';a.click();
   toast('JSON экспортирован');
 }
 
-// ═══ IMPORT ═══
 function importFile(input){
   const file=input.files[0];if(!file)return;
   const ext=file.name.split('.').pop().toLowerCase();
@@ -898,7 +926,8 @@ function importFile(input){
       try{const d=JSON.parse(e.target.result);
         if(d.tasks){tasks=d.tasks;nextId=Math.max(...tasks.map(t=>t.id||0))+1;}
         if(d.staff)staff=d.staff;
-        save();renderAll();toast(`Импортировано ${tasks.length} задач`);
+        if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+        renderAll();toast(`Импортировано ${tasks.length} задач`);
       }catch{toast('Ошибка JSON','error');}
     };r.readAsText(file);
   }else if(ext==='xlsx'){
@@ -910,40 +939,22 @@ function importFile(input){
           const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1});
           const headers=rows[0]||[];
           const map={}; headers.forEach((h,idx)=>{if(h)map[String(h).trim().toLowerCase()]=idx;});
-          
-          const getIdx = (keys, def) => {
-            const found = Object.keys(map).find(mk => keys.some(k => mk.includes(k)));
-            return found !== undefined ? map[found] : def;
-          };
-          
-          const iTask = getIdx(['задач'], 1);
-          const iCreated = getIdx(['постановк', 'создан'], -1); // Если колонки нет, будет -1
-          const iStart = getIdx(['начал'], 2);
-          const iEnd = getIdx(['оконча'], 3);
-          const iExec = getIdx(['исполн'], 4);
-          const iCoexec = getIdx(['соисполн'], 5);
-          const iNote = getIdx(['примеч'], 6);
-          const iStatus = getIdx(['статус'], 7);
+          const getIdx = (keys, def) => { const found = Object.keys(map).find(mk => keys.some(k => mk.includes(k))); return found !== undefined ? map[found] : def; };
+          const iTask = getIdx(['задач'], 1); const iCreated = getIdx(['постановк', 'создан'], -1); const iStart = getIdx(['начал'], 2);
+          const iEnd = getIdx(['оконча'], 3); const iExec = getIdx(['исполн'], 4); const iCoexec = getIdx(['соисполн'], 5);
+          const iPriority = getIdx(['приоритет'], -1); const iNote = getIdx(['примеч'], 6); const iStatus = getIdx(['статус'], 7);
 
           rows.slice(1).forEach(r=>{
             if(!r[iTask])return;
             const fd=v=>{if(!v)return'';if(typeof v==='number'){return new Date(Math.round((v-25569)*86400*1000)).toISOString().slice(0,10);}return String(v).includes('-')?String(v).slice(0,10):'';};
-            
-            nt.push({
-              id:nextId++,
-              month:sn,
-              task:String(r[iTask]||''),
-              created:iCreated >= 0 ? fd(r[iCreated]) : '',
-              start:fd(r[iStart]),
-              end:fd(r[iEnd]),
-              exec:String(r[iExec]||''),
-              coexec:String(r[iCoexec]||''),
-              note:String(r[iNote]||''),
-              status:String(r[iStatus]||'')
-            });
+            nt.push({ id:nextId++, month:sn, task:String(r[iTask]||''), created:iCreated >= 0 ? fd(r[iCreated]) : '', start:fd(r[iStart]), end:fd(r[iEnd]), exec:String(r[iExec]||''), coexec:String(r[iCoexec]||''), priority:iPriority >= 0 ? String(r[iPriority]||'') : '', note:String(r[iNote]||''), status:String(r[iStatus]||'') });
           });
         });
-        if(nt.length&&confirm(`Найдено ${nt.length} задач. Заменить текущие данные?`)){tasks=nt;save();renderAll();toast(`Импортировано ${nt.length} задач`);}
+        if(nt.length&&confirm(`Найдено ${nt.length} задач. Заменить текущие данные?`)){
+          tasks=nt;
+          if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+          renderAll();toast(`Импортировано ${nt.length} задач`);
+        }
         else if(!nt.length)toast('Задачи не найдены','warn');
       }catch(err){toast('Ошибка XLSX: '+err.message,'error');}
     };r.readAsArrayBuffer(file);
@@ -951,25 +962,26 @@ function importFile(input){
   input.value='';
 }
 
-function clearAll(){if(!confirm('Удалить ВСЕ данные? Это необратимо.'))return;tasks=[];staff=[];nextId=1;save();renderAll();renderStaff();toast('Очищено','warn');}
+function clearAll(){
+  if(!confirm('Удалить ВСЕ данные? Это необратимо.'))return;
+  tasks=[];staff=[];nextId=1;
+  if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+  renderAll();renderStaff();toast('Очищено','warn');
+}
 
-// ═══ KEYBOARD ═══
+// ═══ KEYBOARD EVENTS ═══
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();if((e.metaKey||e.ctrlKey)&&e.key==='n'){e.preventDefault();openAddModal();}});
 document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
 
-// ═══ BIND TO WINDOW ═══
-window.toggleRole = toggleRole; window.showTab = showTab; window.openAddModal = openAddModal;
-window.renderAll = renderAll; window.exportExcel = exportExcel; window.importFile = importFile;
-window.setPeriod = setPeriod; window.setFilter = setFilter; window.toggleSD = toggleSD;
-window.setStatus = setStatus; window.editNote = editNote; window.openEditModal = openEditModal;
-window.deleteTask = deleteTask; window.addStaff = addStaff; window.deleteStaff = deleteStaff;
-window.toggleSetting = toggleSetting; window.exportJSON = exportJSON; window.clearAll = clearAll;
-window.closeModal = closeModal; window.saveTask = saveTask; window.toggleDictation = toggleDictation;
-
-// ═══ CLOUD INIT ═══
+// ═══ BOOTSTRAPPING (CLOUD OR FALLBACK) ═══
 function fallbackToLocal() {
   if (!isReady) {
-    if (!loadLocal()) initDefaults();
+    try {
+      const t=localStorage.getItem('pt'), s=localStorage.getItem('ps'), se=localStorage.getItem('pse');
+      if(t)tasks=JSON.parse(t); if(s)staff=JSON.parse(s); if(se)settings={...settings,...JSON.parse(se)};
+      nextId=tasks.length?Math.max(...tasks.map(x=>x.id))+1:1;
+      if(!t) initDefaults();
+    } catch(e) { initDefaults(); }
     isReady = true;
     renderAll();
     if(document.getElementById('tab-staff').style.display !== 'none') renderStaff();
@@ -977,66 +989,96 @@ function fallbackToLocal() {
 }
 
 async function startApp() {
-  if (!isCloudMode) {
-    fallbackToLocal();
-    return;
-  }
-
   try {
-    const token = typeof window !== 'undefined' && window.__initial_auth_token ? window.__initial_auth_token : (typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null);
-    if (token) {
-      await signInWithCustomToken(auth, token);
-    } else {
-      await signInAnonymously(auth);
-    }
-  } catch (err) {
-    console.error("Auth init error:", err);
-    fallbackToLocal();
-    return;
-  }
+    let configToUse = null;
+    let isCustomCloud = false;
 
-  onAuthStateChanged(auth, (user) => {
-    currentUser = user;
-    if (user) {
-      const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker');
-      
-      onSnapshot(collRef, (snapshot) => {
-        let found = false;
-        snapshot.forEach(docSnap => {
-          if (docSnap.id === 'mainState') {
-            found = true;
-            const data = docSnap.data();
-            tasks = JSON.parse(data.tasks || '[]');
-            staff = JSON.parse(data.staff || '[]');
-            settings = JSON.parse(data.settings || '{}');
-            settings = {showOverdue:true, warnDays:true, ...settings};
-            nextId = tasks.length ? Math.max(...tasks.map(x => x.id)) + 1 : 1;
-            isReady = true;
-            
-            const active = document.activeElement;
-            const isEditing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
-            if (!isEditing || document.getElementById('modal').classList.contains('open') === false) {
-                renderAll();
-                if(document.getElementById('tab-staff').style.display !== 'none') renderStaff();
-            }
-          }
-        });
-        
-        if (!found && !isReady) {
-          fallbackToLocal();
-        }
-      }, (error) => {
-        console.error("Sync error:", error);
-        fallbackToLocal();
-        toast("Облако недоступно, работаем локально", "warn");
-      });
+    if (Object.keys(MY_CLOUD_CONFIG).length > 0) {
+      configToUse = MY_CLOUD_CONFIG;
+      isCustomCloud = true;
+      docPathArgs = ['protocol_data', 'mainState'];
     } else {
-      fallbackToLocal();
+      const fConfigStr = typeof window !== 'undefined' && window.__firebase_config ? window.__firebase_config : null;
+      if (fConfigStr) {
+        configToUse = JSON.parse(fConfigStr);
+        const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
+        docPathArgs = ['artifacts', appId, 'public', 'data', 'protocol_tracker', 'mainState'];
+      }
     }
-  });
+
+    if (!configToUse || Object.keys(configToUse).length === 0) {
+      throw new Error("Нет конфигурации облака");
+    }
+
+    const [appModule, authModule, fsModule] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js")
+    ]);
+
+    const app = appModule.initializeApp(configToUse);
+    const auth = authModule.getAuth(app);
+    db = fsModule.getFirestore(app);
+    fbSetDoc = fsModule.setDoc;
+    fbDoc = fsModule.doc;
+    isCloudMode = true;
+
+    if (isCustomCloud) {
+      await authModule.signInAnonymously(auth);
+    } else {
+      const token = typeof window !== 'undefined' && window.__initial_auth_token ? window.__initial_auth_token : null;
+      if (token) await authModule.signInWithCustomToken(auth, token);
+      else await authModule.signInAnonymously(auth);
+    }
+
+    authModule.onAuthStateChanged(auth, (user) => {
+      currentUser = user;
+      if (user) {
+        let collRef;
+        if (isCustomCloud) {
+          collRef = fsModule.collection(db, 'protocol_data');
+        } else {
+          const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
+          collRef = fsModule.collection(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker');
+        }
+
+        fsModule.onSnapshot(collRef, (snapshot) => {
+          let found = false;
+          snapshot.forEach(docSnap => {
+            if (docSnap.id === 'mainState') {
+              found = true;
+              const data = docSnap.data();
+              tasks = JSON.parse(data.tasks || '[]');
+              staff = JSON.parse(data.staff || '[]');
+              settings = JSON.parse(data.settings || '{}');
+              settings = {showOverdue:true, warnDays:true, ...settings};
+              nextId = tasks.length ? Math.max(...tasks.map(x => x.id)) + 1 : 1;
+              isReady = true;
+
+              const active = document.activeElement;
+              const isEditing = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+              if (!isEditing || document.getElementById('modal').classList.contains('open') === false) {
+                  renderAll();
+                  if(document.getElementById('tab-staff').style.display !== 'none') renderStaff();
+              }
+            }
+          });
+          if (!found && !isReady) fallbackToLocal();
+        }, (error) => {
+          console.error("Sync error:", error);
+          fallbackToLocal();
+        });
+      } else {
+        fallbackToLocal();
+      }
+    });
+
+  } catch (err) {
+    console.warn("Cloud features unavailable, switching to local mode.", err.message);
+    fallbackToLocal();
+  }
 }
 
-// Запуск приложения
 initSpeech();
 startApp();
 
