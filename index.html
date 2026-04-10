@@ -108,14 +108,28 @@ main{padding:0 24px 80px;}
 .status-opt{padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background .1s;}
 .status-opt:hover{background:rgba(255,255,255,.05);}
 .status-opt .dot{width:6px;height:6px;border-radius:50%;}
-.act-btn{background:none;border:none;width:25px;height:25px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);transition:all .12s;font-size:13px;}
-.act-btn:hover{background:var(--surface2);color:var(--text);}
+.act-btn{background:var(--surface2);border:1px solid var(--border);width:32px;height:32px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-dim);transition:all .12s;font-size:13px;}
+.act-btn:hover{background:var(--surface3);color:var(--text);}
 .act-btn.del:hover{background:rgba(255,94,87,.12);color:var(--red);}
 .act-btn:disabled{opacity:.2;cursor:not-allowed;}
 .note-text{font-size:11px;color:var(--text-muted);font-style:italic;cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .15s;}
 .note-text:hover{border-color:var(--text-dim);}
 .note-input{background:var(--surface2);border:1px solid var(--accent);border-radius:6px;padding:4px 8px;color:var(--text);font-family:'Golos Text',sans-serif;font-size:11px;width:100%;outline:none;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text-dim);font-size:14px;}
+
+/* Voice Dictation Pulse */
+@keyframes pulseMic {
+  0% { box-shadow: 0 0 0 0 rgba(255, 94, 87, 0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(255, 94, 87, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 94, 87, 0); }
+}
+.mic-active {
+  color: var(--red) !important;
+  animation: pulseMic 1.5s infinite;
+  border-color: rgba(255,94,87,0.4) !important;
+  background: rgba(255,94,87,0.1) !important;
+}
+
 /* MOBILE CARDS */
 .mobile-cards{display:none;}
 .task-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:8px;transition:border-color .15s;}
@@ -124,6 +138,7 @@ main{padding:0 24px 80px;}
 .card-task{font-size:13px;line-height:1.5;flex:1;}
 .card-meta{display:flex;flex-wrap:wrap;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:10px;}
 .card-bottom{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;}
 .modal-overlay.open{display:flex;}
@@ -142,6 +157,7 @@ input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.4);}
 select option{background:var(--surface2);}
 textarea{resize:vertical;min-height:68px;}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
+
 /* STAFF */
 .staff-page,.settings-page{padding:24px;}
 .page-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;margin-bottom:18px;}
@@ -154,6 +170,7 @@ textarea{resize:vertical;min-height:68px;}
 .staff-info{flex:1;min-width:0;}
 .staff-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .staff-role{font-size:11px;color:var(--text-muted);}
+
 /* SETTINGS */
 .settings-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;}
 .settings-section h3{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;}
@@ -164,6 +181,7 @@ textarea{resize:vertical;min-height:68px;}
 .toggle.on{background:var(--accent);}
 .toggle::after{content:'';position:absolute;width:15px;height:15px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;}
 .toggle.on::after{left:17px;}
+
 /* TOAST */
 .toast{position:fixed;bottom:22px;right:22px;z-index:9999;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:tIn .22s ease;pointer-events:none;}
 .toast.success{border-color:rgba(62,207,142,.35);color:var(--green);}
@@ -346,7 +364,13 @@ textarea{resize:vertical;min-height:68px;}
     <button class="modal-close" onclick="closeModal()">×</button>
     <div class="modal-title" id="modalTitle">Новая задача</div>
     <div class="form-grid">
-      <div class="form-group full"><label>Задача *</label><textarea id="fTask" rows="3" placeholder="Описание задачи..."></textarea></div>
+      <div class="form-group full">
+        <label>Задача *</label>
+        <div style="display:flex; gap:8px;">
+          <textarea id="fTask" rows="3" placeholder="Описание задачи..." style="flex:1;"></textarea>
+          <button id="micBtn" class="act-btn" type="button" title="Диктовать голосом" onclick="toggleDictation()" style="height:auto; min-width:48px; font-size:20px; flex-shrink:0;">🎤</button>
+        </div>
+      </div>
       <div class="form-group">
         <label>Период</label>
         <div style="display:flex; gap:5px;">
@@ -630,6 +654,82 @@ function editNote(e,id){
   inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();});
 }
 
+// ═══ SPEECH RECOGNITION ═══
+let speechRecognition = null;
+let isRecording = false;
+
+function initSpeech() {
+  if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    speechRecognition = new SpeechRec();
+    speechRecognition.lang = 'ru-RU';
+    speechRecognition.interimResults = false;
+    speechRecognition.continuous = true;
+
+    speechRecognition.onstart = () => {
+      isRecording = true;
+      document.getElementById('micBtn').classList.add('mic-active');
+      toast('🎙 Запись пошла... Говорите', 'success');
+    };
+
+    speechRecognition.onresult = (event) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript + ' ';
+        }
+      }
+      const taskInput = document.getElementById('fTask');
+      const currentVal = taskInput.value.trim();
+      const newText = finalTranscript.trim();
+      if(newText) {
+        taskInput.value = currentVal ? currentVal + ' ' + newText : newText;
+      }
+    };
+
+    speechRecognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error === 'not-allowed') {
+        toast('❌ Нет доступа к микрофону', 'error');
+      } else if (event.error !== 'no-speech') {
+        toast('Ошибка распознавания: ' + event.error, 'error');
+      }
+      stopDictation();
+    };
+
+    speechRecognition.onend = () => {
+      stopDictation();
+    };
+  } else {
+    // Hide mic button if browser doesn't support it
+    const micBtn = document.getElementById('micBtn');
+    if (micBtn) micBtn.style.display = 'none';
+  }
+}
+
+function toggleDictation() {
+  if (!speechRecognition) {
+    toast('Ваш браузер не поддерживает голосовой ввод', 'warn');
+    return;
+  }
+  if (isRecording) {
+    speechRecognition.stop();
+  } else {
+    try {
+      speechRecognition.start();
+    } catch(e) {
+      console.error('Не удалось запустить распознавание', e);
+      speechRecognition.stop();
+    }
+  }
+}
+
+function stopDictation() {
+  isRecording = false;
+  const btn = document.getElementById('micBtn');
+  if (btn) btn.classList.remove('mic-active');
+}
+
 // ═══ MODAL ═══
 function openAddModal(){
   if(!isAdmin)return;editingId=null;
@@ -639,6 +739,7 @@ function openAddModal(){
   document.getElementById('fMonth').value=MONTHS[new Date().getMonth()];
   document.getElementById('fYear').value=new Date().getFullYear();
   document.getElementById('fCreated').value=today;
+  stopDictation(); // Сбрасываем микрофон, если был включен
   document.getElementById('modal').classList.add('open');
   setTimeout(()=>document.getElementById('fTask').focus(),80);
 }
@@ -656,9 +757,14 @@ function openEditModal(id){
   document.getElementById('fExec').value=t.exec;
   document.getElementById('fCoexec').value=t.coexec;
   document.getElementById('fNote').value=t.note;
+  stopDictation(); // Сбрасываем микрофон, если был включен
   document.getElementById('modal').classList.add('open');
 }
-function closeModal(){document.getElementById('modal').classList.remove('open');}
+function closeModal(){
+  stopDictation(); // Отключаем микрофон при закрытии окна
+  if (isRecording && speechRecognition) speechRecognition.stop();
+  document.getElementById('modal').classList.remove('open');
+}
 function saveTask(){
   const task=document.getElementById('fTask').value.trim();
   if(!task){toast('Введите описание задачи','error');document.getElementById('fTask').focus();return;}
@@ -805,6 +911,7 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target===docu
 load();
 if(!tasks.length)initDefaults();
 renderAll();
+initSpeech(); // Инициализация функции распознавания голоса
 </script>
 </body>
 </html>
