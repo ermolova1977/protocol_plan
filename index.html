@@ -412,13 +412,26 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// Firebase Configuration & Initialization
-const fConfigStr = typeof window !== 'undefined' && window.__firebase_config ? window.__firebase_config : (typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-const firebaseConfig = JSON.parse(fConfigStr);
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
+let isCloudMode = false;
+let db = null;
+let auth = null;
+let appId = 'default-app-id';
+
+try {
+  const fConfigStr = typeof window !== 'undefined' && window.__firebase_config ? window.__firebase_config : (typeof __firebase_config !== 'undefined' ? __firebase_config : null);
+  if (fConfigStr) {
+    const config = JSON.parse(fConfigStr);
+    if (Object.keys(config).length > 0) {
+      const app = initializeApp(config);
+      auth = getAuth(app);
+      db = getFirestore(app);
+      appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : (typeof __app_id !== 'undefined' ? __app_id : 'default-app-id');
+      isCloudMode = true;
+    }
+  }
+} catch (e) {
+  console.warn("Cloud config error - fallback to local mode", e);
+}
 
 // ═══ STATE ═══
 let tasks=[], staff=[], nextId=1, editingId=null;
@@ -429,24 +442,38 @@ const ACLRS=['#6c63ff','#ff6584','#3ecf8e','#ff9f43','#54a0ff','#f5c842','#ff5e5
 const today=new Date().toISOString().slice(0,10);
 const plus3=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
 
-// ═══ PERSIST (CLOUD SYNC) ═══
+// ═══ PERSIST (CLOUD & LOCAL SYNC) ═══
 let isReady = false;
 let currentUser = null;
 
 async function save(){
-  if (!currentUser) return;
-  const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker', 'mainState');
-  try {
-    await setDoc(docRef, {
-      tasks: JSON.stringify(tasks),
-      staff: JSON.stringify(staff),
-      settings: JSON.stringify(settings),
-      updatedAt: new Date().toISOString()
-    });
-  } catch (e) {
-    console.error("Save error:", e);
-    toast('Ошибка сохранения в облако', 'error');
+  if (isCloudMode && currentUser) {
+    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker', 'mainState');
+    try {
+      await setDoc(docRef, {
+        tasks: JSON.stringify(tasks),
+        staff: JSON.stringify(staff),
+        settings: JSON.stringify(settings),
+        updatedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error("Save error:", e);
+      toast('Ошибка сохранения в облако', 'error');
+    }
+  } else {
+    localStorage.setItem('pt',JSON.stringify(tasks));
+    localStorage.setItem('ps',JSON.stringify(staff));
+    localStorage.setItem('pse',JSON.stringify(settings));
   }
+}
+
+function loadLocal() {
+  try {
+    const t=localStorage.getItem('pt'),s=localStorage.getItem('ps'),se=localStorage.getItem('pse');
+    if(t)tasks=JSON.parse(t); if(s)staff=JSON.parse(s); if(se)settings={...settings,...JSON.parse(se)};
+    nextId=tasks.length?Math.max(...tasks.map(x=>x.id))+1:1;
+    return !!t;
+  } catch(e) { return false; }
 }
 
 function initDefaults(){
@@ -940,7 +967,21 @@ window.toggleSetting = toggleSetting; window.exportJSON = exportJSON; window.cle
 window.closeModal = closeModal; window.saveTask = saveTask; window.toggleDictation = toggleDictation;
 
 // ═══ CLOUD INIT ═══
+function fallbackToLocal() {
+  if (!isReady) {
+    if (!loadLocal()) initDefaults();
+    isReady = true;
+    renderAll();
+    if(document.getElementById('tab-staff').style.display !== 'none') renderStaff();
+  }
+}
+
 async function startApp() {
+  if (!isCloudMode) {
+    fallbackToLocal();
+    return;
+  }
+
   try {
     const token = typeof window !== 'undefined' && window.__initial_auth_token ? window.__initial_auth_token : (typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null);
     if (token) {
@@ -950,12 +991,13 @@ async function startApp() {
     }
   } catch (err) {
     console.error("Auth init error:", err);
+    fallbackToLocal();
+    return;
   }
 
   onAuthStateChanged(auth, (user) => {
     currentUser = user;
     if (user) {
-      // Используем запрос коллекции (collection) вместо запроса одного документа (doc) для предотвращения таймаутов
       const collRef = collection(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker');
       
       onSnapshot(collRef, (snapshot) => {
@@ -981,13 +1023,15 @@ async function startApp() {
         });
         
         if (!found && !isReady) {
-          initDefaults();
-          isReady = true;
+          fallbackToLocal();
         }
       }, (error) => {
         console.error("Sync error:", error);
-        toast("Ошибка синхронизации данных", "error");
+        fallbackToLocal();
+        toast("Облако недоступно, работаем локально", "warn");
       });
+    } else {
+      fallbackToLocal();
     }
   });
 }
