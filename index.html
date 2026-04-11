@@ -244,6 +244,9 @@ textarea{resize:vertical;min-height:68px;}
 <header>
   <div class="logo">Протокол</div>
   <div class="header-right">
+    <div class="stat-pill" id="cloudStatus" title="Статус синхронизации: загрузка...">
+      <span class="stat-dot" style="background:var(--text-dim)"></span><span id="csText">Загрузка</span>
+    </div>
     <div class="stat-pill"><span class="stat-dot" style="background:var(--green)"></span><span id="hd-done">0</span></div>
     <div class="stat-pill"><span class="stat-dot" style="background:var(--orange)"></span><span id="hd-prog">0</span></div>
     <div class="stat-pill"><span class="stat-dot" style="background:var(--red)"></span><span id="hd-todo">0</span></div>
@@ -475,6 +478,22 @@ let db = null;
 let fbSetDoc = null;
 let fbDoc = null;
 let docPathArgs = [];
+
+// ═══ UI CLOUD STATUS ═══
+function setCloudStatus(status, msg) {
+  const dot = document.querySelector('#cloudStatus .stat-dot');
+  const txt = document.getElementById('csText');
+  if (status === 'ok') {
+    dot.style.background = 'var(--green)'; txt.textContent = 'В облаке';
+    if (msg) toast(msg, 'success');
+  } else if (status === 'err') {
+    dot.style.background = 'var(--red)'; txt.textContent = 'Ошибка';
+    if (msg) toast(msg, 'error');
+  } else {
+    dot.style.background = 'var(--text-dim)'; txt.textContent = 'Локально';
+    if (msg) toast(msg, 'warn');
+  }
+}
 
 // ═══ SAVE LOGIC (CLOUD + LOCAL) ═══
 window.saveTask = async function() {
@@ -996,7 +1015,7 @@ async function startApp() {
     if (Object.keys(MY_CLOUD_CONFIG).length > 0) {
       configToUse = MY_CLOUD_CONFIG;
       isCustomCloud = true;
-      docPathArgs = ['protocol_data', 'mainState'];
+      docPathArgs = ['artifacts', 'custom_app', 'public', 'data', 'protocol_tracker', 'mainState'];
     } else {
       const fConfigStr = typeof window !== 'undefined' && window.__firebase_config ? window.__firebase_config : null;
       if (fConfigStr) {
@@ -1036,7 +1055,7 @@ async function startApp() {
       if (user) {
         let collRef;
         if (isCustomCloud) {
-          collRef = fsModule.collection(db, 'protocol_data');
+          collRef = fsModule.collection(db, 'artifacts', 'custom_app', 'public', 'data', 'protocol_tracker');
         } else {
           const appId = typeof window !== 'undefined' && window.__app_id ? window.__app_id : 'default-app-id';
           collRef = fsModule.collection(db, 'artifacts', appId, 'public', 'data', 'protocol_tracker');
@@ -1063,9 +1082,25 @@ async function startApp() {
               }
             }
           });
-          if (!found && !isReady) fallbackToLocal();
+          
+          setCloudStatus('ok');
+
+          if (!found) {
+            // База пуста, нужно создать первый документ
+            if (!isReady) fallbackToLocal(); 
+            const docRef = fbDoc(db, ...docPathArgs);
+            fbSetDoc(docRef, {
+              tasks: JSON.stringify(tasks),
+              staff: JSON.stringify(staff),
+              settings: JSON.stringify(settings),
+              updatedAt: new Date().toISOString()
+            }).catch(e => console.error("Initial cloud seed error", e));
+          }
         }, (error) => {
           console.error("Sync error:", error);
+          let errMsg = "Ошибка: синхронизация прервана";
+          if (error.code === 'permission-denied') errMsg = "Ошибка: обновите правила Firebase (Шаг 2)";
+          setCloudStatus('err', errMsg);
           fallbackToLocal();
         });
       } else {
@@ -1075,6 +1110,9 @@ async function startApp() {
 
   } catch (err) {
     console.warn("Cloud features unavailable, switching to local mode.", err.message);
+    let errMsg = "Облако недоступно";
+    if (err.code === 'auth/operation-not-allowed') errMsg = "Ошибка: включите анонимный вход (Шаг 3)";
+    setCloudStatus('err', errMsg);
     fallbackToLocal();
   }
 }
