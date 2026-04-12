@@ -126,6 +126,8 @@ main{padding:0 24px 80px;}
 .note-text:hover{border-color:var(--text-dim);}
 .note-input{background:var(--surface3);border:1px solid var(--accent);border-radius:6px;padding:4px 8px;color:var(--text);font-family:'Golos Text',sans-serif;font-size:11px;width:100%;outline:none;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:14px;}
+.file-link{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);text-decoration:none;margin-top:6px;padding:4px 8px;background:rgba(46,134,222,.1);border-radius:6px;border:1px solid rgba(46,134,222,.2);transition:all .2s;}
+.file-link:hover{background:rgba(46,134,222,.2);}
 
 /* Voice Dictation Pulse */
 @keyframes pulseMic {
@@ -220,6 +222,7 @@ textarea{resize:vertical;min-height:68px;}
   .person-tag, .coperson-tag { color: #000 !important; }
   .date-s, .date-e { color: #000 !important; }
   .col-actions { display: none !important; }
+  .file-link { display: none !important; }
 }
 
 @media(max-width:768px){
@@ -285,7 +288,7 @@ textarea{resize:vertical;min-height:68px;}
     <div class="chip" data-val="выполнено" onclick="setFilter('выполнено')">✓ Выполнено</div>
     <div class="chip" data-val="в работе" onclick="setFilter('в работе')">● В работе</div>
     <div class="chip" data-val="не выполнено" onclick="setFilter('не выполнено')">✕ Не выполнено</div>
-    <div class="chip" data-val="" onclick="setFilter('')">- Без статуса</div>
+    <div class="chip" data-val="" onclick="setFilter('')">— Без статуса</div>
     <div class="chip" data-val="overdue" onclick="setFilter('overdue')">⚠ Просроченные</div>
   </div>
 
@@ -343,8 +346,8 @@ textarea{resize:vertical;min-height:68px;}
         <button class="btn btn-ghost" style="font-size:12px;" onclick="toggleRole()">Сменить</button>
       </div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.7;">
-        <b style="color:var(--text)">Администратор</b> - полный доступ: создание, редактирование, удаление задач.<br>
-        <b style="color:var(--text)">Наблюдатель</b> - только просмотр. Все кнопки редактирования заблокированы.
+        <b style="color:var(--text)">Администратор</b> — полный доступ: создание, редактирование, удаление задач.<br>
+        <b style="color:var(--text)">Наблюдатель</b> — только просмотр. Все кнопки редактирования заблокированы.
       </div>
     </div>
     <div class="settings-section">
@@ -383,6 +386,18 @@ textarea{resize:vertical;min-height:68px;}
           <button id="micBtn" class="act-btn" type="button" title="Диктовать голосом" onclick="toggleDictation()" style="height:auto; min-width:48px; font-size:20px; flex-shrink:0;">🎤</button>
         </div>
       </div>
+      
+      <!-- НОВОЕ ПОЛЕ: ФАЙЛЫ -->
+      <div class="form-group full">
+        <label>Прикрепленный файл (ссылка или загрузка)</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="text" id="fFile" placeholder="Вставьте ссылку (Яндекс.Диск, Google Drive...)" style="flex:1;">
+          <input type="file" id="fFileInput" style="display:none" onchange="uploadFileToStorage(this)">
+          <button type="button" class="btn btn-ghost" id="btnUpload" onclick="document.getElementById('fFileInput').click()" style="height:35px; white-space:nowrap;">📎 Загрузить</button>
+        </div>
+        <div id="uploadStatus" style="font-size:10px; color:var(--text-muted); margin-top:4px;"></div>
+      </div>
+      
       <div class="form-group">
         <label>Период</label>
         <div style="display:flex; gap:5px;">
@@ -398,7 +413,7 @@ textarea{resize:vertical;min-height:68px;}
       <div class="form-group">
         <label>Статус</label>
         <select id="fStatus">
-          <option value="">- Без статуса</option>
+          <option value="">— Без статуса</option>
           <option value="не выполнено">Не выполнено</option>
           <option value="в работе">В работе</option>
           <option value="выполнено">Выполнено</option>
@@ -407,7 +422,7 @@ textarea{resize:vertical;min-height:68px;}
       <div class="form-group">
         <label>Приоритет</label>
         <select id="fPriority">
-          <option value="">- Без приоритета</option>
+          <option value="">— Без приоритета</option>
           <option value="низкий">Низкий</option>
           <option value="средний">Средний</option>
           <option value="высокий">Высокий</option>
@@ -418,7 +433,7 @@ textarea{resize:vertical;min-height:68px;}
       <div class="form-group"><label>Окончание работы</label><input type="date" id="fEnd"></div>
       <div class="form-group"><label>Исполнитель</label><input type="text" id="fExec" placeholder="ФИО" list="staffList"></div>
       <div class="form-group"><label>Соисполнитель</label><input type="text" id="fCoexec" placeholder="ФИО" list="staffList"></div>
-      <div class="form-group full"><label>Примечание</label><input type="text" id="fNote" placeholder="Дополнительные сведения..."></input></div>
+      <div class="form-group full"><label>Примечание</label><input type="text" id="fNote" placeholder="Дополнительные сведения..."></div>
     </div>
     <datalist id="staffList"></datalist>
     <div class="modal-actions">
@@ -469,15 +484,21 @@ window.importFile = importFile;
 window.clearAll = clearAll;
 window.toggleDictation = toggleDictation;
 window.renderAll = renderAll;
+window.uploadFileToStorage = uploadFileToStorage;
 
 // ═══ CLOUD VARIABLES ═══
 let isCloudMode = false;
 let isReady = false;
 let currentUser = null;
 let db = null;
+let storage = null;
 let fbSetDoc = null;
 let fbDoc = null;
+let fbRef = null;
+let fbUploadBytes = null;
+let fbGetDownloadURL = null;
 let docPathArgs = [];
+let appId = 'default-app-id';
 
 // ═══ UI CLOUD STATUS ═══
 function setCloudStatus(status, msg) {
@@ -514,7 +535,8 @@ window.saveTask = async function() {
     end:document.getElementById('fEnd').value,
     exec:document.getElementById('fExec').value.trim(), 
     coexec:document.getElementById('fCoexec').value.trim(),
-    note:document.getElementById('fNote').value.trim()
+    note:document.getElementById('fNote').value.trim(),
+    file:document.getElementById('fFile').value.trim()
   };
     
   if(editingId){ Object.assign(tasks.find(t=>t.id===editingId),d); toast('Задача обновлена'); }
@@ -578,14 +600,14 @@ function toggleRole(){
 }
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function fmtDate(d){if(!d)return'-';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
+function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
 function stCls(s){return s==='выполнено'?'st-done':s==='в работе'?'st-progress':s==='не выполнено'?'st-todo':'st-none';}
-function stLbl(s){return s||'- Нет статуса';}
+function stLbl(s){return s||'— Нет статуса';}
 function stDotClr(s){return s==='выполнено'?'var(--green)':s==='в работе'?'var(--orange)':s==='не выполнено'?'var(--red)':'var(--text-dim)';}
 
 // функции для бейджей приоритета
 function prCls(p){return p==='высокий'?'pr-high':p==='средний'?'pr-med':p==='низкий'?'pr-low':'pr-none';}
-function prLbl(p){return p?esc(p):'- без приоритета';}
+function prLbl(p){return p?esc(p):'— без приоритета';}
 
 function initials(n){return(n||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
 function aColor(n){let h=0;for(const c of(n||''))h=(h*31+c.charCodeAt(0))%ACLRS.length;return ACLRS[h];}
@@ -613,7 +635,9 @@ function buildExecFilter(){
   sel.innerHTML='<option value="">Все исполнители</option>'+execs.map(e=>`<option value="${esc(e)}"${cur===e?' selected':''}>${esc(e)}</option>`).join('');
 }
 
-function updateDL(){document.getElementById('staffList').innerHTML=staff.map(s=>`<option value="${esc(s.name)}">`).join('');}
+function updateDL(){
+  document.getElementById('staffList').innerHTML=staff.map(s=>`<option value="${esc(s.name)}"></option>`).join('');
+}
 
 function checkDeadlines(){
   const ov=tasks.filter(t=>t.end&&t.end<today&&t.status!=='выполнено');
@@ -725,19 +749,21 @@ function renderAll(){
     list.forEach((t,i)=>{
       const ov=t.end&&t.end<today&&t.status!=='выполнено';
       const sc=stCls(t.status); const dis=isAdmin?'':'disabled';
+      const fileTag=t.file ? `<br><a href="${esc(t.file)}" target="_blank" class="file-link">📎 Открыть файл</a>` : '';
+      
       html+=`<tr ${ov?'class="ov-row"':''}>
         <td class="col-num">${i+1}</td>
-        <td class="col-task"><div class="task-text">${esc(t.task)}</div></td>
+        <td class="col-task"><div class="task-text">${esc(t.task)}${fileTag}</div></td>
         <td class="col-created">${fmtDate(t.created)}</td>
-        <td class="col-date"><div class="date-range"><span class="date-s">${fmtDate(t.start)}</span>${t.end?`<span class="date-e">- ${fmtDate(t.end)}</span>`:''}</div></td>
+        <td class="col-date"><div class="date-range"><span class="date-s">${fmtDate(t.start)}</span>${t.end?`<span class="date-e">— ${fmtDate(t.end)}</span>`:''}</div></td>
         <td class="col-exec">${t.exec?`<span class="person-tag">${esc(t.exec)}</span>`:''}</td>
-        <td class="col-coexec">${t.coexec?`<span class="coperson-tag">${esc(t.coexec)}</span>`:'<span style="color:var(--text-dim);font-size:11px">-</span>'}</td>
+        <td class="col-coexec">${t.coexec?`<span class="coperson-tag">${esc(t.coexec)}</span>`:'<span style="color:var(--text-dim);font-size:11px">—</span>'}</td>
         <td class="col-status status-cell">
           <span class="status-badge ${sc}" onclick="${isAdmin?`toggleSD(event,${t.id})`:''}"><span class="dot"></span>${stLbl(t.status)}</span>
           ${isAdmin?sdHtml(t.id):''}
         </td>
         <td class="col-priority"><span class="pr-badge ${prCls(t.priority)}">${prLbl(t.priority)}</span></td>
-        <td class="col-note"><span class="note-text" onclick="${isAdmin?`editNote(event,${t.id})`:''}">${t.note?esc(t.note):'<span style="color:var(--text-dim)">-</span>'}</span></td>
+        <td class="col-note"><span class="note-text" onclick="${isAdmin?`editNote(event,${t.id})`:''}">${t.note?esc(t.note):'<span style="color:var(--text-dim)">—</span>'}</span></td>
         <td class="col-actions">
           <button class="act-btn" onclick="openEditModal(${t.id})" ${dis}>✎</button>
           <button class="act-btn del" onclick="deleteTask(${t.id})" ${dis}>✕</button>
@@ -747,6 +773,7 @@ function renderAll(){
     html+=`</tbody></table><div class="mobile-cards">`;
     list.forEach((t,i)=>{
       const ov=t.end&&t.end<today&&t.status!=='выполнено';const sc=stCls(t.status);
+      const fileTag=t.file ? `<a href="${esc(t.file)}" target="_blank" class="file-link" style="margin-top:0;">📎 Файл</a>` : '';
       html+=`<div class="task-card ${ov?'ov-row':''}">
         <div class="card-top">
           <div class="card-task">${esc(t.task)}</div>
@@ -757,10 +784,11 @@ function renderAll(){
         </div>
         <div class="card-meta">
           ${t.created?`<span>📌 Поставлена: ${fmtDate(t.created)}</span>`:''}
-          ${t.start?`<span>📅 Сроки: ${fmtDate(t.start)}${t.end?' - '+fmtDate(t.end):''}</span>`:''}
+          ${t.start?`<span>📅 Сроки: ${fmtDate(t.start)}${t.end?' — '+fmtDate(t.end):''}</span>`:''}
           ${t.exec?`<span>👤 ${esc(t.exec)}</span>`:''}
           ${t.coexec?`<span>👥 ${esc(t.coexec)}</span>`:''}
           ${t.note?`<span>💬 ${esc(t.note)}</span>`:''}
+          ${fileTag}
         </div>
         <div class="card-bottom">
           <div style="display:flex;gap:6px;">${isAdmin?`<button class="act-btn" onclick="openEditModal(${t.id})">✎</button><button class="act-btn del" onclick="deleteTask(${t.id})">✕</button>`:''}</div>
@@ -784,6 +812,41 @@ function editNote(e,id){
      renderAll();
   });
   inp.addEventListener('keydown',ev=>{if(ev.key==='Enter')inp.blur();});
+}
+
+// ═══ FILE UPLOAD (FIREBASE STORAGE) ═══
+async function uploadFileToStorage(input) {
+  if (!isCloudMode || !storage || !fbUploadBytes || !fbGetDownloadURL || !fbRef) {
+    toast('Хранилище недоступно. Вставьте ссылку вручную.', 'warn');
+    input.value = '';
+    return;
+  }
+  
+  const file = input.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('uploadStatus');
+  const btn = document.getElementById('btnUpload');
+  
+  statusEl.textContent = 'Загрузка... Пожалуйста, подождите.';
+  btn.disabled = true;
+
+  try {
+    const fileRef = fbRef(storage, `protocol_files/${Date.now()}_${file.name}`);
+    await fbUploadBytes(fileRef, file);
+    const url = await fbGetDownloadURL(fileRef);
+    
+    document.getElementById('fFile').value = url;
+    statusEl.textContent = `Успешно загружено: ${file.name}`;
+    toast('Файл успешно загружен', 'success');
+  } catch (err) {
+    console.error('Upload Error:', err);
+    statusEl.textContent = 'Ошибка загрузки. Проверьте права доступа в Firebase Storage.';
+    toast('Ошибка загрузки файла', 'error');
+  } finally {
+    btn.disabled = false;
+    input.value = '';
+  }
 }
 
 // ═══ MODAL AND SPEECH ═══
@@ -842,19 +905,26 @@ function stopDictation() {
 
 function openAddModal(){
   if(!isAdmin)return;editingId=null;
+  updateDL(); // Принудительное обновление списка сотрудников перед открытием
+  
   document.getElementById('modalTitle').textContent='Новая задача';
-  ['fTask','fStart','fEnd','fExec','fCoexec','fNote'].forEach(id=>document.getElementById(id).value='');
+  ['fTask','fStart','fEnd','fExec','fCoexec','fNote','fFile'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('uploadStatus').textContent='';
   document.getElementById('fStatus').value='';
   document.getElementById('fPriority').value='';
   document.getElementById('fMonth').value=MONTHS[new Date().getMonth()];
   document.getElementById('fYear').value=new Date().getFullYear();
   document.getElementById('fCreated').value=today;
-  stopDictation(); document.getElementById('modal').classList.add('open');
+  
+  stopDictation(); 
+  document.getElementById('modal').classList.add('open');
   setTimeout(()=>document.getElementById('fTask').focus(),80);
 }
 
 function openEditModal(id){
   if(!isAdmin)return;editingId=id;const t=tasks.find(t=>t.id===id);
+  updateDL(); // Принудительное обновление списка сотрудников перед открытием
+  
   document.getElementById('modalTitle').textContent='Редактировать задачу';
   const parts = (t.month||'').split(' ');
   document.getElementById('fTask').value=t.task;
@@ -868,7 +938,11 @@ function openEditModal(id){
   document.getElementById('fExec').value=t.exec;
   document.getElementById('fCoexec').value=t.coexec;
   document.getElementById('fNote').value=t.note;
-  stopDictation(); document.getElementById('modal').classList.add('open');
+  document.getElementById('fFile').value=t.file || '';
+  document.getElementById('uploadStatus').textContent='';
+  
+  stopDictation(); 
+  document.getElementById('modal').classList.add('open');
 }
 
 function closeModal(){
@@ -888,12 +962,18 @@ function addStaff(){
   const name=document.getElementById('sfName').value.trim();if(!name){toast('Введите ФИО','error');return;}
   staff.push({id:Date.now(),name,role:document.getElementById('sfRole').value.trim(),phone:document.getElementById('sfPhone').value.trim(),color:aColor(name)});
   document.getElementById('sfName').value='';document.getElementById('sfRole').value='';document.getElementById('sfPhone').value='';
+  
+  updateDL(); // Принудительное обновление списка для форм
+  
   if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
   renderStaff(); toast('Сотрудник добавлен');
 }
 function deleteStaff(id){
   if(!isAdmin||!confirm('Удалить сотрудника?'))return;
   staff=staff.filter(s=>s.id!==id);
+  
+  updateDL(); // Принудительное обновление списка для форм
+  
   if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
   renderStaff(); toast('Удалён','warn');
 }
@@ -902,7 +982,7 @@ function renderStaff(){
   if(!staff.length){g.innerHTML='<div style="color:var(--text-dim);font-size:13px;">Справочник пуст.</div>';return;}
   g.innerHTML=staff.map(s=>`<div class="staff-card">
     <div class="staff-avatar" style="background:${s.color}22;color:${s.color}">${initials(s.name)}</div>
-    <div class="staff-info"><div class="staff-name">${esc(s.name)}</div><div class="staff-role">${esc(s.role||'-')}${s.phone?' · '+esc(s.phone):''}</div></div>
+    <div class="staff-info"><div class="staff-name">${esc(s.name)}</div><div class="staff-role">${esc(s.role||'—')}${s.phone?' · '+esc(s.phone):''}</div></div>
     <button class="act-btn del" onclick="deleteStaff(${s.id})" ${isAdmin?'':'disabled'}>✕</button>
   </div>`).join('');
 }
@@ -918,10 +998,10 @@ function exportExcel(){
   const months=[...new Set(tasks.map(t=>t.month))].sort((a,b)=>parsePeriod(a)-parsePeriod(b));
   months.forEach(month=>{
     const list=tasks.filter(t=>t.month===month);
-    const rows=[['№ п/п','Задача','Дата постановки','Начало','Окончание','Исполнитель','Соисполнитель','Приоритет','Примечания','Статус']];
-    list.forEach((t,i)=>rows.push([i+1,t.task,t.created||'',t.start||'',t.end||'',t.exec||'',t.coexec||'',t.priority||'',t.note||'',t.status||'']));
+    const rows=[['№ п/п','Задача','Дата постановки','Начало','Окончание','Исполнитель','Соисполнитель','Приоритет','Ссылка на файл','Примечания','Статус']];
+    list.forEach((t,i)=>rows.push([i+1,t.task,t.created||'',t.start||'',t.end||'',t.exec||'',t.coexec||'',t.priority||'',t.file||'',t.note||'',t.status||'']));
     const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:5},{wch:60},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20},{wch:15},{wch:22},{wch:15}];
+    ws['!cols']=[{wch:5},{wch:60},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20},{wch:15},{wch:25},{wch:22},{wch:15}];
     XLSX.utils.book_append_sheet(wb,ws,month);
   });
   const sumRows=[['Месяц','Всего','Выполнено','В работе','Не выполнено','% выполнения']];
@@ -961,12 +1041,12 @@ function importFile(input){
           const getIdx = (keys, def) => { const found = Object.keys(map).find(mk => keys.some(k => mk.includes(k))); return found !== undefined ? map[found] : def; };
           const iTask = getIdx(['задач'], 1); const iCreated = getIdx(['постановк', 'создан'], -1); const iStart = getIdx(['начал'], 2);
           const iEnd = getIdx(['оконча'], 3); const iExec = getIdx(['исполн'], 4); const iCoexec = getIdx(['соисполн'], 5);
-          const iPriority = getIdx(['приоритет'], -1); const iNote = getIdx(['примеч'], 6); const iStatus = getIdx(['статус'], 7);
+          const iPriority = getIdx(['приоритет'], -1); const iFile = getIdx(['файл', 'ссылк'], -1); const iNote = getIdx(['примеч'], 6); const iStatus = getIdx(['статус'], 7);
 
           rows.slice(1).forEach(r=>{
             if(!r[iTask])return;
             const fd=v=>{if(!v)return'';if(typeof v==='number'){return new Date(Math.round((v-25569)*86400*1000)).toISOString().slice(0,10);}return String(v).includes('-')?String(v).slice(0,10):'';};
-            nt.push({ id:nextId++, month:sn, task:String(r[iTask]||''), created:iCreated >= 0 ? fd(r[iCreated]) : '', start:fd(r[iStart]), end:fd(r[iEnd]), exec:String(r[iExec]||''), coexec:String(r[iCoexec]||''), priority:iPriority >= 0 ? String(r[iPriority]||'') : '', note:String(r[iNote]||''), status:String(r[iStatus]||'') });
+            nt.push({ id:nextId++, month:sn, task:String(r[iTask]||''), created:iCreated >= 0 ? fd(r[iCreated]) : '', start:fd(r[iStart]), end:fd(r[iEnd]), exec:String(r[iExec]||''), coexec:String(r[iCoexec]||''), priority:iPriority >= 0 ? String(r[iPriority]||'') : '', file:iFile >= 0 ? String(r[iFile]||'') : '', note:String(r[iNote]||''), status:String(r[iStatus]||'') });
           });
         });
         if(nt.length&&confirm(`Найдено ${nt.length} задач. Заменить текущие данные?`)){
@@ -1029,10 +1109,11 @@ async function startApp() {
       throw new Error("Нет конфигурации облака");
     }
 
-    const [appModule, authModule, fsModule] = await Promise.all([
+    const [appModule, authModule, fsModule, storageModule] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"),
-      import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js")
+      import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js").catch(()=>null)
     ]);
 
     const app = appModule.initializeApp(configToUse);
@@ -1040,6 +1121,14 @@ async function startApp() {
     db = fsModule.getFirestore(app);
     fbSetDoc = fsModule.setDoc;
     fbDoc = fsModule.doc;
+    
+    if (storageModule) {
+      storage = storageModule.getStorage(app);
+      fbRef = storageModule.ref;
+      fbUploadBytes = storageModule.uploadBytes;
+      fbGetDownloadURL = storageModule.getDownloadURL;
+    }
+    
     isCloudMode = true;
 
     if (isCustomCloud) {
@@ -1086,7 +1175,6 @@ async function startApp() {
           setCloudStatus('ok');
 
           if (!found) {
-            // База пуста, нужно создать первый документ
             if (!isReady) fallbackToLocal(); 
             const docRef = fbDoc(db, ...docPathArgs);
             fbSetDoc(docRef, {
@@ -1111,7 +1199,7 @@ async function startApp() {
   } catch (err) {
     console.warn("Cloud features unavailable, switching to local mode.", err.message);
     let errMsg = "Облако недоступно";
-    if (err.code === 'auth/operation-not-allowed') errMsg = "Ошибка: включите анонимный вход (Шаг 3)";
+    if (err && err.code === 'auth/operation-not-allowed') errMsg = "Ошибка: включите анонимный вход (Шаг 3)";
     setCloudStatus('err', errMsg);
     fallbackToLocal();
   }
