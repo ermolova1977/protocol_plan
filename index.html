@@ -79,6 +79,7 @@ main{padding:0 24px 80px;}
 .tasks-table td{padding:11px 13px;font-size:13px;vertical-align:middle;}
 .col-num{width:36px;text-align:center;color:var(--text-dim);font-weight:700;font-size:11px;}
 .col-task{min-width:200px;}
+.col-project{width:120px;}
 .col-created{width:80px;}
 .col-date{width:90px;}
 .col-exec{width:115px;}
@@ -94,6 +95,7 @@ main{padding:0 24px 80px;}
 .date-e{color:var(--text-muted);}
 .person-tag{font-size:12px;font-weight:600;color:var(--blue);display:block;}
 .coperson-tag{font-size:11px;color:var(--text-muted);display:block;}
+.project-tag{font-size:11px;font-weight:600;color:var(--accent);display:inline-block;padding:2px 6px;background:rgba(108,99,255,.1);border-radius:4px;border:1px solid rgba(108,99,255,.2);margin-bottom:4px;}
 .status-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:14px;white-space:nowrap;cursor:pointer;border:1px solid transparent;transition:all .12s;}
 .status-badge .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
 .st-done{background:rgba(16,172,132,.15);color:var(--green);border-color:rgba(16,172,132,.3);}
@@ -169,7 +171,7 @@ select option{background:#fff;color:#000;}
 textarea{resize:vertical;min-height:68px;}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
 
-/* STAFF */
+/* STAFF & PROJECTS */
 .staff-page,.settings-page{padding:24px;}
 .page-title{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;margin-bottom:18px;}
 .staff-add-form{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
@@ -217,7 +219,7 @@ textarea{resize:vertical;min-height:68px;}
   .tasks-table th, .tasks-table td { border: 1px solid #000 !important; color: #000 !important; padding: 6px !important; font-size: 11px !important; }
   .tasks-table thead th { background: #f0f0f0 !important; }
   .mobile-cards { display: none !important; }
-  .status-badge, .pr-badge { border: none !important; background: transparent !important; color: #000 !important; padding: 0 !important; }
+  .status-badge, .pr-badge, .project-tag { border: none !important; background: transparent !important; color: #000 !important; padding: 0 !important; }
   .status-badge .dot { display: none !important; }
   .person-tag, .coperson-tag { color: #000 !important; }
   .date-s, .date-e { color: #000 !important; }
@@ -228,7 +230,7 @@ textarea{resize:vertical;min-height:68px;}
 @media(max-width:768px){
   .tasks-table{display:none!important;}
   .mobile-cards{display:block;}
-  .col-coexec,.col-note,.col-created,.col-priority{display:none;}
+  .col-coexec,.col-note,.col-created,.col-priority,.col-project{display:none;}
   header{padding:0 16px;}
   .toolbar,.filter-row,.period-bar,main{padding-left:16px;padding-right:16px;}
   .progress-section,.deadline-banner{margin-left:16px;margin-right:16px;}
@@ -260,6 +262,7 @@ textarea{resize:vertical;min-height:68px;}
 <div class="nav-tabs">
   <button class="nav-tab active" onclick="showTab('tasks')">📋 Задачи</button>
   <button class="nav-tab" onclick="showTab('staff')">👥 Сотрудники</button>
+  <button class="nav-tab" onclick="showTab('projects')">📁 Проекты</button>
   <button class="nav-tab" onclick="showTab('settings')">⚙️ Настройки</button>
 </div>
 
@@ -288,7 +291,7 @@ textarea{resize:vertical;min-height:68px;}
     <div class="chip" data-val="выполнено" onclick="setFilter('выполнено')">✓ Выполнено</div>
     <div class="chip" data-val="в работе" onclick="setFilter('в работе')">● В работе</div>
     <div class="chip" data-val="не выполнено" onclick="setFilter('не выполнено')">✕ Не выполнено</div>
-    <div class="chip" data-val="" onclick="setFilter('')">— Без статуса</div>
+    <div class="chip" data-val="" onclick="setFilter('')">- Без статуса</div>
     <div class="chip" data-val="overdue" onclick="setFilter('overdue')">⚠ Просроченные</div>
   </div>
 
@@ -329,9 +332,22 @@ textarea{resize:vertical;min-height:68px;}
       <div class="form-group"><label>ФИО</label><input type="text" id="sfName" placeholder="Фамилия И.О."></div>
       <div class="form-group"><label>Должность</label><input type="text" id="sfRole" placeholder="Директор..."></div>
       <div class="form-group"><label>Телефон</label><input type="text" id="sfPhone" placeholder="+7 ..."></div>
-      <button class="btn btn-primary" onclick="addStaff()">＋ Добавить</button>
+      <button class="btn btn-primary" id="btnStaffAdd" onclick="addStaff()">＋ Добавить</button>
     </div>
     <div class="staff-grid" id="staffGrid"></div>
+  </div>
+</div>
+
+<!-- ───── ПРОЕКТЫ ───── -->
+<div id="tab-projects" style="display:none">
+  <div class="staff-page">
+    <div class="page-title">Справочник проектов</div>
+    <div class="staff-add-form" id="projectAddForm">
+      <div class="form-group"><label>Название проекта</label><input type="text" id="pjName" placeholder="ЖК Лесной..."></div>
+      <div class="form-group" style="flex:2;"><label>Описание (опционально)</label><input type="text" id="pjDesc" placeholder="Краткое описание..."></div>
+      <button class="btn btn-primary" id="btnProjectAdd" onclick="addProject()">＋ Добавить</button>
+    </div>
+    <div class="staff-grid" id="projectGrid"></div>
   </div>
 </div>
 
@@ -346,8 +362,8 @@ textarea{resize:vertical;min-height:68px;}
         <button class="btn btn-ghost" style="font-size:12px;" onclick="toggleRole()">Сменить</button>
       </div>
       <div style="font-size:12px;color:var(--text-muted);margin-top:10px;line-height:1.7;">
-        <b style="color:var(--text)">Администратор</b> — полный доступ: создание, редактирование, удаление задач.<br>
-        <b style="color:var(--text)">Наблюдатель</b> — только просмотр. Все кнопки редактирования заблокированы.
+        <b style="color:var(--text)">Администратор</b> - полный доступ: создание, редактирование, удаление задач.<br>
+        <b style="color:var(--text)">Наблюдатель</b> - только просмотр. Все кнопки редактирования заблокированы.
       </div>
     </div>
     <div class="settings-section">
@@ -387,7 +403,7 @@ textarea{resize:vertical;min-height:68px;}
         </div>
       </div>
       
-      <!-- НОВОЕ ПОЛЕ: ФАЙЛЫ -->
+      <!-- ФАЙЛЫ -->
       <div class="form-group full">
         <label>Прикрепленный файл (ссылка или загрузка)</label>
         <div style="display:flex; gap:8px; align-items:center;">
@@ -398,6 +414,10 @@ textarea{resize:vertical;min-height:68px;}
         <div id="uploadStatus" style="font-size:10px; color:var(--text-muted); margin-top:4px;"></div>
       </div>
       
+      <div class="form-group">
+        <label>Проект</label>
+        <input type="text" id="fProject" placeholder="Название проекта" list="projectList">
+      </div>
       <div class="form-group">
         <label>Период</label>
         <div style="display:flex; gap:5px;">
@@ -413,7 +433,7 @@ textarea{resize:vertical;min-height:68px;}
       <div class="form-group">
         <label>Статус</label>
         <select id="fStatus">
-          <option value="">— Без статуса</option>
+          <option value="">- Без статуса</option>
           <option value="не выполнено">Не выполнено</option>
           <option value="в работе">В работе</option>
           <option value="выполнено">Выполнено</option>
@@ -422,7 +442,7 @@ textarea{resize:vertical;min-height:68px;}
       <div class="form-group">
         <label>Приоритет</label>
         <select id="fPriority">
-          <option value="">— Без приоритета</option>
+          <option value="">- Без приоритета</option>
           <option value="низкий">Низкий</option>
           <option value="средний">Средний</option>
           <option value="высокий">Высокий</option>
@@ -433,9 +453,12 @@ textarea{resize:vertical;min-height:68px;}
       <div class="form-group"><label>Окончание работы</label><input type="date" id="fEnd"></div>
       <div class="form-group"><label>Исполнитель</label><input type="text" id="fExec" placeholder="ФИО" list="staffList"></div>
       <div class="form-group"><label>Соисполнитель</label><input type="text" id="fCoexec" placeholder="ФИО" list="staffList"></div>
-      <div class="form-group full"><label>Примечание</label><input type="text" id="fNote" placeholder="Дополнительные сведения..."></div>
+      <div class="form-group full"><label>Примечание</label><input type="text" id="fNote" placeholder="Дополнительные сведения..."></input></div>
     </div>
+    
     <datalist id="staffList"></datalist>
+    <datalist id="projectList"></datalist>
+    
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
       <button class="btn btn-primary" onclick="saveTask()">Сохранить</button>
@@ -455,7 +478,8 @@ const MY_CLOUD_CONFIG = {
 };
 
 // ═══ STATE & CONSTANTS ═══
-let tasks=[], staff=[], nextId=1, editingId=null;
+let tasks=[], staff=[], projects=[], nextId=1, editingId=null;
+let editingStaffId=null, editingProjectId=null;
 let filterStatus='all', filterPeriod='all', isAdmin=true;
 let settings={showOverdue:true, warnDays:true};
 const MONTHS=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -476,7 +500,11 @@ window.openEditModal = openEditModal;
 window.closeModal = closeModal;
 window.deleteTask = deleteTask;
 window.addStaff = addStaff;
+window.editStaff = editStaff;
 window.deleteStaff = deleteStaff;
+window.addProject = addProject;
+window.editProject = editProject;
+window.deleteProject = deleteProject;
 window.toggleSetting = toggleSetting;
 window.exportExcel = exportExcel;
 window.exportJSON = exportJSON;
@@ -527,6 +555,7 @@ window.saveTask = async function() {
   
   const d = {
     task, 
+    project:document.getElementById('fProject').value.trim(),
     month:period, 
     status:document.getElementById('fStatus').value,
     priority:document.getElementById('fPriority').value,
@@ -550,6 +579,7 @@ window.saveTask = async function() {
       await fbSetDoc(docRef, {
         tasks: JSON.stringify(tasks),
         staff: JSON.stringify(staff),
+        projects: JSON.stringify(projects),
         settings: JSON.stringify(settings),
         updatedAt: new Date().toISOString()
       });
@@ -566,16 +596,18 @@ window.saveTask = async function() {
 function saveLocal() {
   localStorage.setItem('pt',JSON.stringify(tasks));
   localStorage.setItem('ps',JSON.stringify(staff));
+  localStorage.setItem('pp',JSON.stringify(projects));
   localStorage.setItem('pse',JSON.stringify(settings));
 }
 
 function initDefaults(){
   staff=[{id:1,name:'Куриленко З.В.',role:'Директор',phone:'',color:ACLRS[0]},{id:2,name:'Ермолова Е.В.',role:'Менеджер',phone:'',color:ACLRS[1]}];
+  projects=[{id:1,name:'Основной проект',desc:'Стандартные задачи'}];
   const cy = new Date().getFullYear();
   tasks=[
-    {id:1,month:`Январь ${cy}`,task:'Составить, согласовать и подписать Партнерское соглашение с участниками проекта',created:'2026-01-01',start:'2026-01-04',end:'2026-01-15',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено',priority:'высокий'},
-    {id:2,month:`Январь ${cy}`,task:'Подобрать офис и заключить договор аренды',created:'2026-01-01',start:'2026-01-12',end:'2026-03-31',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено',priority:'средний'},
-    {id:3,month:`Январь ${cy}`,task:'Зарегистрировать юридическое лицо ООО "Девелопмент групп"',created:'2026-01-01',start:'2026-01-19',end:'2026-01-31',exec:'Куриленко З.В.',coexec:'Ермолова Е.В.',note:'',status:'в работе',priority:''}
+    {id:1,project:'Основной проект',month:`Январь ${cy}`,task:'Составить, согласовать и подписать Партнерское соглашение с участниками проекта',created:'2026-01-01',start:'2026-01-04',end:'2026-01-15',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено',priority:'высокий'},
+    {id:2,project:'Основной проект',month:`Январь ${cy}`,task:'Подобрать офис и заключить договор аренды',created:'2026-01-01',start:'2026-01-12',end:'2026-03-31',exec:'Куриленко З.В.',coexec:'',note:'',status:'не выполнено',priority:'средний'},
+    {id:3,project:'Основной проект',month:`Январь ${cy}`,task:'Зарегистрировать юридическое лицо ООО "Девелопмент групп"',created:'2026-01-01',start:'2026-01-19',end:'2026-01-31',exec:'Куриленко З.В.',coexec:'Ермолова Е.В.',note:'',status:'в работе',priority:''}
   ];
   nextId=4; 
   saveLocal();
@@ -583,9 +615,16 @@ function initDefaults(){
 
 // ═══ CORE UI FUNCTIONS ═══
 function showTab(n){
-  ['tasks','staff','settings'].forEach(t=>document.getElementById('tab-'+t).style.display=t===n?'':'none');
-  document.querySelectorAll('.nav-tab').forEach((el,i)=>el.classList.toggle('active',['tasks','staff','settings'][i]===n));
+  ['tasks','staff','projects','settings'].forEach(t=> {
+      const el = document.getElementById('tab-'+t);
+      if(el) el.style.display=t===n?'':'none';
+  });
+  document.querySelectorAll('.nav-tab').forEach((el,i)=> {
+      const tabNames = ['tasks','staff','projects','settings'];
+      el.classList.toggle('active', tabNames[i]===n);
+  });
   if(n==='staff')renderStaff();
+  if(n==='projects')renderProjects();
 }
 
 function toggleRole(){
@@ -596,18 +635,20 @@ function toggleRole(){
   document.getElementById('roleLabel').textContent=isAdmin?'Администратор':'Наблюдатель';
   document.getElementById('addBtn').disabled=!isAdmin;
   document.getElementById('staffAddForm').style.display=isAdmin?'':'none';
-  renderAll(); toast(isAdmin?'👑 Режим администратора':'👁 Режим наблюдателя',isAdmin?'success':'warn');
+  document.getElementById('projectAddForm').style.display=isAdmin?'':'none';
+  renderAll(); renderStaff(); renderProjects();
+  toast(isAdmin?'👑 Режим администратора':'👁 Режим наблюдателя',isAdmin?'success':'warn');
 }
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function fmtDate(d){if(!d)return'—';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
+function fmtDate(d){if(!d)return'-';const[y,m,day]=d.split('-');return`${day}.${m}.${y}`;}
 function stCls(s){return s==='выполнено'?'st-done':s==='в работе'?'st-progress':s==='не выполнено'?'st-todo':'st-none';}
-function stLbl(s){return s||'— Нет статуса';}
+function stLbl(s){return s||'- Нет статуса';}
 function stDotClr(s){return s==='выполнено'?'var(--green)':s==='в работе'?'var(--orange)':s==='не выполнено'?'var(--red)':'var(--text-dim)';}
 
 // функции для бейджей приоритета
 function prCls(p){return p==='высокий'?'pr-high':p==='средний'?'pr-med':p==='низкий'?'pr-low':'pr-none';}
-function prLbl(p){return p?esc(p):'— без приоритета';}
+function prLbl(p){return p?esc(p):'- без приоритета';}
 
 function initials(n){return(n||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();}
 function aColor(n){let h=0;for(const c of(n||''))h=(h*31+c.charCodeAt(0))%ACLRS.length;return ACLRS[h];}
@@ -637,6 +678,7 @@ function buildExecFilter(){
 
 function updateDL(){
   document.getElementById('staffList').innerHTML=staff.map(s=>`<option value="${esc(s.name)}"></option>`).join('');
+  document.getElementById('projectList').innerHTML=projects.map(p=>`<option value="${esc(p.name)}"></option>`).join('');
 }
 
 function checkDeadlines(){
@@ -680,7 +722,7 @@ function getFiltered(){
     if(filterStatus==='overdue'){if(!(t.end&&t.end<today&&t.status!=='выполнено'))return false;}
     else if(filterStatus!=='all'&&t.status!==filterStatus)return false;
     if(ef&&t.exec!==ef)return false;
-    if(q&&!t.task.toLowerCase().includes(q)&&!(t.exec||'').toLowerCase().includes(q)&&!(t.coexec||'').toLowerCase().includes(q))return false;
+    if(q&&!t.task.toLowerCase().includes(q)&&!(t.exec||'').toLowerCase().includes(q)&&!(t.coexec||'').toLowerCase().includes(q)&&!(t.project||'').toLowerCase().includes(q))return false;
     return true;
   });
 }
@@ -709,7 +751,7 @@ window.saveTask_internal_status_update = async function() {
     if (isCloudMode && currentUser && db && fbSetDoc && fbDoc) {
       try {
         const docRef = fbDoc(db, ...docPathArgs);
-        await fbSetDoc(docRef, { tasks: JSON.stringify(tasks), staff: JSON.stringify(staff), settings: JSON.stringify(settings), updatedAt: new Date().toISOString() });
+        await fbSetDoc(docRef, { tasks: JSON.stringify(tasks), staff: JSON.stringify(staff), projects: JSON.stringify(projects), settings: JSON.stringify(settings), updatedAt: new Date().toISOString() });
       } catch(e) {}
     } else saveLocal();
 }
@@ -742,7 +784,7 @@ function renderAll(){
         <div class="month-meta"><span>${list.length} задач</span><span style="color:var(--green)">${pct}% выполнено</span></div>
       </div>
       <table class="tasks-table"><thead><tr>
-        <th class="col-num">№</th><th class="col-task">Задача</th><th class="col-created">Постановка</th><th class="col-date">Сроки</th>
+        <th class="col-num">№</th><th class="col-project">Проект</th><th class="col-task">Задача</th><th class="col-created">Постановка</th><th class="col-date">Сроки</th>
         <th class="col-exec">Исполнитель</th><th class="col-coexec">Соисполнитель</th>
         <th class="col-status">Статус</th><th class="col-priority">Приоритет</th><th class="col-note">Примечание</th><th class="col-actions"></th>
       </tr></thead><tbody>`;
@@ -753,17 +795,18 @@ function renderAll(){
       
       html+=`<tr ${ov?'class="ov-row"':''}>
         <td class="col-num">${i+1}</td>
+        <td class="col-project">${t.project ? esc(t.project) : '<span style="color:var(--text-dim)">-</span>'}</td>
         <td class="col-task"><div class="task-text">${esc(t.task)}${fileTag}</div></td>
         <td class="col-created">${fmtDate(t.created)}</td>
-        <td class="col-date"><div class="date-range"><span class="date-s">${fmtDate(t.start)}</span>${t.end?`<span class="date-e">— ${fmtDate(t.end)}</span>`:''}</div></td>
+        <td class="col-date"><div class="date-range"><span class="date-s">${fmtDate(t.start)}</span>${t.end?`<span class="date-e">- ${fmtDate(t.end)}</span>`:''}</div></td>
         <td class="col-exec">${t.exec?`<span class="person-tag">${esc(t.exec)}</span>`:''}</td>
-        <td class="col-coexec">${t.coexec?`<span class="coperson-tag">${esc(t.coexec)}</span>`:'<span style="color:var(--text-dim);font-size:11px">—</span>'}</td>
+        <td class="col-coexec">${t.coexec?`<span class="coperson-tag">${esc(t.coexec)}</span>`:'<span style="color:var(--text-dim);font-size:11px">-</span>'}</td>
         <td class="col-status status-cell">
           <span class="status-badge ${sc}" onclick="${isAdmin?`toggleSD(event,${t.id})`:''}"><span class="dot"></span>${stLbl(t.status)}</span>
           ${isAdmin?sdHtml(t.id):''}
         </td>
         <td class="col-priority"><span class="pr-badge ${prCls(t.priority)}">${prLbl(t.priority)}</span></td>
-        <td class="col-note"><span class="note-text" onclick="${isAdmin?`editNote(event,${t.id})`:''}">${t.note?esc(t.note):'<span style="color:var(--text-dim)">—</span>'}</span></td>
+        <td class="col-note"><span class="note-text" onclick="${isAdmin?`editNote(event,${t.id})`:''}">${t.note?esc(t.note):'<span style="color:var(--text-dim)">-</span>'}</span></td>
         <td class="col-actions">
           <button class="act-btn" onclick="openEditModal(${t.id})" ${dis}>✎</button>
           <button class="act-btn del" onclick="deleteTask(${t.id})" ${dis}>✕</button>
@@ -776,7 +819,10 @@ function renderAll(){
       const fileTag=t.file ? `<a href="${esc(t.file)}" target="_blank" class="file-link" style="margin-top:0;">📎 Файл</a>` : '';
       html+=`<div class="task-card ${ov?'ov-row':''}">
         <div class="card-top">
-          <div class="card-task">${esc(t.task)}</div>
+          <div class="card-task">
+            ${t.project ? `<span class="project-tag">${esc(t.project)}</span><br>` : ''}
+            ${esc(t.task)}
+          </div>
           <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
             <span class="status-badge ${sc}"><span class="dot"></span>${stLbl(t.status)}</span>
             <span class="pr-badge ${prCls(t.priority)}">${prLbl(t.priority)}</span>
@@ -784,7 +830,7 @@ function renderAll(){
         </div>
         <div class="card-meta">
           ${t.created?`<span>📌 Поставлена: ${fmtDate(t.created)}</span>`:''}
-          ${t.start?`<span>📅 Сроки: ${fmtDate(t.start)}${t.end?' — '+fmtDate(t.end):''}</span>`:''}
+          ${t.start?`<span>📅 Сроки: ${fmtDate(t.start)}${t.end?' - '+fmtDate(t.end):''}</span>`:''}
           ${t.exec?`<span>👤 ${esc(t.exec)}</span>`:''}
           ${t.coexec?`<span>👥 ${esc(t.coexec)}</span>`:''}
           ${t.note?`<span>💬 ${esc(t.note)}</span>`:''}
@@ -905,10 +951,10 @@ function stopDictation() {
 
 function openAddModal(){
   if(!isAdmin)return;editingId=null;
-  updateDL(); // Принудительное обновление списка сотрудников перед открытием
+  updateDL(); // Принудительное обновление списков перед открытием
   
   document.getElementById('modalTitle').textContent='Новая задача';
-  ['fTask','fStart','fEnd','fExec','fCoexec','fNote','fFile'].forEach(id=>document.getElementById(id).value='');
+  ['fTask','fProject','fStart','fEnd','fExec','fCoexec','fNote','fFile'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('uploadStatus').textContent='';
   document.getElementById('fStatus').value='';
   document.getElementById('fPriority').value='';
@@ -923,11 +969,12 @@ function openAddModal(){
 
 function openEditModal(id){
   if(!isAdmin)return;editingId=id;const t=tasks.find(t=>t.id===id);
-  updateDL(); // Принудительное обновление списка сотрудников перед открытием
+  updateDL(); // Принудительное обновление списков перед открытием
   
   document.getElementById('modalTitle').textContent='Редактировать задачу';
   const parts = (t.month||'').split(' ');
   document.getElementById('fTask').value=t.task;
+  document.getElementById('fProject').value=t.project || '';
   document.getElementById('fMonth').value=parts[0] || MONTHS[new Date().getMonth()];
   document.getElementById('fYear').value=parts[1] || new Date().getFullYear();
   document.getElementById('fCreated').value=t.created || '';
@@ -957,35 +1004,117 @@ function deleteTask(id){
   renderAll(); toast('Задача удалена','warn');
 }
 
-// ═══ STAFF & SETTINGS ═══
+// ═══ STAFF ═══
+function editStaff(id) {
+  if(!isAdmin) return;
+  const s = staff.find(x=>x.id===id);
+  if(!s) return;
+  document.getElementById('sfName').value = s.name;
+  document.getElementById('sfRole').value = s.role || '';
+  document.getElementById('sfPhone').value = s.phone || '';
+  editingStaffId = id;
+  document.getElementById('btnStaffAdd').textContent = 'Сохранить';
+  window.scrollTo(0, 0);
+  document.getElementById('sfName').focus();
+}
+
 function addStaff(){
   const name=document.getElementById('sfName').value.trim();if(!name){toast('Введите ФИО','error');return;}
-  staff.push({id:Date.now(),name,role:document.getElementById('sfRole').value.trim(),phone:document.getElementById('sfPhone').value.trim(),color:aColor(name)});
+  if(editingStaffId) {
+    const s = staff.find(x=>x.id===editingStaffId);
+    s.name = name;
+    s.role = document.getElementById('sfRole').value.trim();
+    s.phone = document.getElementById('sfPhone').value.trim();
+    s.color = aColor(name);
+    editingStaffId = null;
+    document.getElementById('btnStaffAdd').textContent = '＋ Добавить';
+    toast('Сотрудник обновлен');
+  } else {
+    staff.push({id:Date.now(),name,role:document.getElementById('sfRole').value.trim(),phone:document.getElementById('sfPhone').value.trim(),color:aColor(name)});
+    toast('Сотрудник добавлен');
+  }
   document.getElementById('sfName').value='';document.getElementById('sfRole').value='';document.getElementById('sfPhone').value='';
   
-  updateDL(); // Принудительное обновление списка для форм
-  
+  updateDL();
   if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
-  renderStaff(); toast('Сотрудник добавлен');
+  renderStaff(); 
 }
+
 function deleteStaff(id){
   if(!isAdmin||!confirm('Удалить сотрудника?'))return;
   staff=staff.filter(s=>s.id!==id);
-  
-  updateDL(); // Принудительное обновление списка для форм
-  
+  updateDL();
   if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
   renderStaff(); toast('Удалён','warn');
 }
+
 function renderStaff(){
   const g=document.getElementById('staffGrid');
   if(!staff.length){g.innerHTML='<div style="color:var(--text-dim);font-size:13px;">Справочник пуст.</div>';return;}
   g.innerHTML=staff.map(s=>`<div class="staff-card">
     <div class="staff-avatar" style="background:${s.color}22;color:${s.color}">${initials(s.name)}</div>
-    <div class="staff-info"><div class="staff-name">${esc(s.name)}</div><div class="staff-role">${esc(s.role||'—')}${s.phone?' · '+esc(s.phone):''}</div></div>
-    <button class="act-btn del" onclick="deleteStaff(${s.id})" ${isAdmin?'':'disabled'}>✕</button>
+    <div class="staff-info"><div class="staff-name">${esc(s.name)}</div><div class="staff-role">${esc(s.role||'-')}${s.phone?' · '+esc(s.phone):''}</div></div>
+    <div style="display:flex;gap:4px;">
+      <button class="act-btn" onclick="editStaff(${s.id})" ${isAdmin?'':'disabled'}>✎</button>
+      <button class="act-btn del" onclick="deleteStaff(${s.id})" ${isAdmin?'':'disabled'}>✕</button>
+    </div>
   </div>`).join('');
 }
+
+// ═══ PROJECTS ═══
+function editProject(id) {
+  if(!isAdmin) return;
+  const p = projects.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('pjName').value = p.name;
+  document.getElementById('pjDesc').value = p.desc || '';
+  editingProjectId = id;
+  document.getElementById('btnProjectAdd').textContent = 'Сохранить';
+  window.scrollTo(0, 0);
+  document.getElementById('pjName').focus();
+}
+
+function addProject(){
+  const name=document.getElementById('pjName').value.trim();if(!name){toast('Введите название проекта','error');return;}
+  if(editingProjectId) {
+    const p = projects.find(x=>x.id===editingProjectId);
+    p.name = name;
+    p.desc = document.getElementById('pjDesc').value.trim();
+    editingProjectId = null;
+    document.getElementById('btnProjectAdd').textContent = '＋ Добавить';
+    toast('Проект обновлен');
+  } else {
+    projects.push({id:Date.now(),name,desc:document.getElementById('pjDesc').value.trim()});
+    toast('Проект добавлен');
+  }
+  document.getElementById('pjName').value='';document.getElementById('pjDesc').value='';
+  
+  updateDL();
+  if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+  renderProjects(); 
+}
+
+function deleteProject(id){
+  if(!isAdmin||!confirm('Удалить проект?'))return;
+  projects=projects.filter(p=>p.id!==id);
+  updateDL();
+  if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
+  renderProjects(); toast('Удалён','warn');
+}
+
+function renderProjects(){
+  const g=document.getElementById('projectGrid');
+  if(!projects.length){g.innerHTML='<div style="color:var(--text-dim);font-size:13px;">Справочник проектов пуст.</div>';return;}
+  g.innerHTML=projects.map(p=>`<div class="staff-card">
+    <div class="staff-info"><div class="staff-name">${esc(p.name)}</div><div class="staff-role">${esc(p.desc||'-')}</div></div>
+    <div style="display:flex;gap:4px;">
+      <button class="act-btn" onclick="editProject(${p.id})" ${isAdmin?'':'disabled'}>✎</button>
+      <button class="act-btn del" onclick="deleteProject(${p.id})" ${isAdmin?'':'disabled'}>✕</button>
+    </div>
+  </div>`).join('');
+}
+
+// ═══ SETTINGS ═══
 function toggleSetting(key,el){
   settings[key]=!settings[key];el.classList.toggle('on',settings[key]);
   if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
@@ -998,10 +1127,10 @@ function exportExcel(){
   const months=[...new Set(tasks.map(t=>t.month))].sort((a,b)=>parsePeriod(a)-parsePeriod(b));
   months.forEach(month=>{
     const list=tasks.filter(t=>t.month===month);
-    const rows=[['№ п/п','Задача','Дата постановки','Начало','Окончание','Исполнитель','Соисполнитель','Приоритет','Ссылка на файл','Примечания','Статус']];
-    list.forEach((t,i)=>rows.push([i+1,t.task,t.created||'',t.start||'',t.end||'',t.exec||'',t.coexec||'',t.priority||'',t.file||'',t.note||'',t.status||'']));
+    const rows=[['№ п/п','Проект','Задача','Дата постановки','Начало','Окончание','Исполнитель','Соисполнитель','Приоритет','Ссылка на файл','Примечания','Статус']];
+    list.forEach((t,i)=>rows.push([i+1,t.project||'',t.task,t.created||'',t.start||'',t.end||'',t.exec||'',t.coexec||'',t.priority||'',t.file||'',t.note||'',t.status||'']));
     const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:5},{wch:60},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20},{wch:15},{wch:25},{wch:22},{wch:15}];
+    ws['!cols']=[{wch:5},{wch:20},{wch:60},{wch:15},{wch:12},{wch:12},{wch:20},{wch:20},{wch:15},{wch:25},{wch:22},{wch:15}];
     XLSX.utils.book_append_sheet(wb,ws,month);
   });
   const sumRows=[['Месяц','Всего','Выполнено','В работе','Не выполнено','% выполнения']];
@@ -1012,7 +1141,7 @@ function exportExcel(){
 }
 
 function exportJSON(){
-  const blob=new Blob([JSON.stringify({tasks,staff},null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({tasks,staff,projects},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='protocol.json';a.click();
   toast('JSON экспортирован');
 }
@@ -1025,6 +1154,7 @@ function importFile(input){
       try{const d=JSON.parse(e.target.result);
         if(d.tasks){tasks=d.tasks;nextId=Math.max(...tasks.map(t=>t.id||0))+1;}
         if(d.staff)staff=d.staff;
+        if(d.projects)projects=d.projects;
         if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
         renderAll();toast(`Импортировано ${tasks.length} задач`);
       }catch{toast('Ошибка JSON','error');}
@@ -1042,11 +1172,12 @@ function importFile(input){
           const iTask = getIdx(['задач'], 1); const iCreated = getIdx(['постановк', 'создан'], -1); const iStart = getIdx(['начал'], 2);
           const iEnd = getIdx(['оконча'], 3); const iExec = getIdx(['исполн'], 4); const iCoexec = getIdx(['соисполн'], 5);
           const iPriority = getIdx(['приоритет'], -1); const iFile = getIdx(['файл', 'ссылк'], -1); const iNote = getIdx(['примеч'], 6); const iStatus = getIdx(['статус'], 7);
+          const iProject = getIdx(['проект'], -1);
 
           rows.slice(1).forEach(r=>{
             if(!r[iTask])return;
             const fd=v=>{if(!v)return'';if(typeof v==='number'){return new Date(Math.round((v-25569)*86400*1000)).toISOString().slice(0,10);}return String(v).includes('-')?String(v).slice(0,10):'';};
-            nt.push({ id:nextId++, month:sn, task:String(r[iTask]||''), created:iCreated >= 0 ? fd(r[iCreated]) : '', start:fd(r[iStart]), end:fd(r[iEnd]), exec:String(r[iExec]||''), coexec:String(r[iCoexec]||''), priority:iPriority >= 0 ? String(r[iPriority]||'') : '', file:iFile >= 0 ? String(r[iFile]||'') : '', note:String(r[iNote]||''), status:String(r[iStatus]||'') });
+            nt.push({ id:nextId++, month:sn, task:String(r[iTask]||''), project:iProject >= 0 ? String(r[iProject]||'') : '', created:iCreated >= 0 ? fd(r[iCreated]) : '', start:fd(r[iStart]), end:fd(r[iEnd]), exec:String(r[iExec]||''), coexec:String(r[iCoexec]||''), priority:iPriority >= 0 ? String(r[iPriority]||'') : '', file:iFile >= 0 ? String(r[iFile]||'') : '', note:String(r[iNote]||''), status:String(r[iStatus]||'') });
           });
         });
         if(nt.length&&confirm(`Найдено ${nt.length} задач. Заменить текущие данные?`)){
@@ -1063,9 +1194,9 @@ function importFile(input){
 
 function clearAll(){
   if(!confirm('Удалить ВСЕ данные? Это необратимо.'))return;
-  tasks=[];staff=[];nextId=1;
+  tasks=[];staff=[];projects=[];nextId=1;
   if(isCloudMode) window.saveTask_internal_status_update(); else saveLocal();
-  renderAll();renderStaff();toast('Очищено','warn');
+  renderAll();renderStaff();renderProjects();toast('Очищено','warn');
 }
 
 // ═══ KEYBOARD EVENTS ═══
@@ -1076,14 +1207,15 @@ document.getElementById('modal').addEventListener('click',e=>{if(e.target===docu
 function fallbackToLocal() {
   if (!isReady) {
     try {
-      const t=localStorage.getItem('pt'), s=localStorage.getItem('ps'), se=localStorage.getItem('pse');
-      if(t)tasks=JSON.parse(t); if(s)staff=JSON.parse(s); if(se)settings={...settings,...JSON.parse(se)};
+      const t=localStorage.getItem('pt'), s=localStorage.getItem('ps'), p=localStorage.getItem('pp'), se=localStorage.getItem('pse');
+      if(t)tasks=JSON.parse(t); if(s)staff=JSON.parse(s); if(p)projects=JSON.parse(p); if(se)settings={...settings,...JSON.parse(se)};
       nextId=tasks.length?Math.max(...tasks.map(x=>x.id))+1:1;
       if(!t) initDefaults();
     } catch(e) { initDefaults(); }
     isReady = true;
     renderAll();
     if(document.getElementById('tab-staff').style.display !== 'none') renderStaff();
+    if(document.getElementById('tab-projects').style.display !== 'none') renderProjects();
   }
 }
 
@@ -1158,6 +1290,7 @@ async function startApp() {
               const data = docSnap.data();
               tasks = JSON.parse(data.tasks || '[]');
               staff = JSON.parse(data.staff || '[]');
+              projects = JSON.parse(data.projects || '[]');
               settings = JSON.parse(data.settings || '{}');
               settings = {showOverdue:true, warnDays:true, ...settings};
               nextId = tasks.length ? Math.max(...tasks.map(x => x.id)) + 1 : 1;
@@ -1168,6 +1301,7 @@ async function startApp() {
               if (!isEditing || document.getElementById('modal').classList.contains('open') === false) {
                   renderAll();
                   if(document.getElementById('tab-staff').style.display !== 'none') renderStaff();
+                  if(document.getElementById('tab-projects').style.display !== 'none') renderProjects();
               }
             }
           });
@@ -1180,6 +1314,7 @@ async function startApp() {
             fbSetDoc(docRef, {
               tasks: JSON.stringify(tasks),
               staff: JSON.stringify(staff),
+              projects: JSON.stringify(projects),
               settings: JSON.stringify(settings),
               updatedAt: new Date().toISOString()
             }).catch(e => console.error("Initial cloud seed error", e));
